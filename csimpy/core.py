@@ -1,6 +1,7 @@
 import sys
 import os.path
 import libsedml
+import libcellml
 
 __all__ = ['execute_simulation_experiment']
 
@@ -40,6 +41,19 @@ def execute_simulation_experiment(sedml_file, output_directory):
         current = doc.getModel(i)
         print("\tModel id=", current.getId(), " language=", current.getLanguage(), " source=", current.getSource(),
               " numChanges=", current.getNumChanges(), "\n")
+
+        model_base = os.path.abspath(os.path.dirname(sedml_file))
+        model_file = os.path.join(model_base, current.getSource())
+        print("Model file: " + model_file)
+        read_file = open(model_file, "r")
+        parser = libcellml.Parser()
+        model = parser.parseModel(read_file.read())
+        if parser.errorCount():
+            for e in range(0, parser.errorCount()):
+                print(parser.error(e).description())
+                print(parser.error(e).referenceHeading())
+        else:
+            print("No errors parsing: " + model_file)
 
     print("\n")
     print("The document has %d task(s)." % doc.getNumTasks())
