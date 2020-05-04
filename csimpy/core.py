@@ -2,6 +2,7 @@ import sys
 import os.path
 import libsedml
 import libcellml
+from lxml import etree
 
 __all__ = ['execute_simulation_experiment']
 
@@ -45,9 +46,28 @@ def execute_simulation_experiment(sedml_file, output_directory):
         model_base = os.path.abspath(os.path.dirname(sedml_file))
         model_file = os.path.join(model_base, current.getSource())
         print("Model file: " + model_file)
-        read_file = open(model_file, "r")
+        model_tree = etree.parse(model_file)
+
+        # handle changes
+        for c in range(0, current.getNumChanges()):
+            change = current.getChange(c)
+            target = change.getTarget()
+            print("Change target: " + target)
+            if change.getTypeCode() == libsedml.SEDML_CHANGE_ATTRIBUTE:
+                new_value = change.getNewValue()
+                print("Change attribute, new value: " + str(new_value))
+                result = model_tree.xpath(target, namespaces={
+                    'cellml': "http://www.cellml.org/cellml/2.0#",
+                    'xlink': "http://www.w3.org/1999/xlink",
+                    'mathml': "http://www.w3.org/1998/Math/MathML"
+                })
+                attribute = result[0]
+                attribute.getparent().attrib[attribute.attrname] = new_value
+
+        model_string = str(etree.tostring(model_tree, pretty_print=True), 'utf-8')
+
         parser = libcellml.Parser()
-        model = parser.parseModel(read_file.read())
+        model = parser.parseModel(model_string)
         if parser.errorCount():
             for e in range(0, parser.errorCount()):
                 print(parser.error(e).description())

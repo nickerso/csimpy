@@ -20,7 +20,12 @@
         </uniformTimeCourse>
     </listOfSimulations>
     <listOfModels>
-        <model id="model" language="urn:sedml:language:cellml.2_0" source="sine_approximations_import.xml"/>
+        <model id="original_model" language="urn:sedml:language:cellml.2_0" source="sine_approximations_import.xml"/>
+        <model id="changed_amp1" language="urn:sedml:language:cellml.2_0" source="sine_approximations_import.xml">
+            <listOfChanges>
+                <changeAttribute target="/cellml:model/cellml:component[@name=&quot;main&quot;]/cellml:variable[@name=&quot;amp1&quot;]/@initial_value" newValue="0.5" />
+            </listOfChanges>
+        </model>
     </listOfModels>
     <listOfTasks>
         <task id="task1" modelReference="model" simulationReference="simulation1"/>
