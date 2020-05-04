@@ -23,16 +23,6 @@
         <model id="model" language="urn:sedml:language:cellml.2_0" source="sine_approximations_import.xml"/>
     </listOfModels>
     <listOfTasks>
-        <repeatedTask id="repeatedTask" range="once" resetModel="true">
-            <listOfRanges>
-                <vectorRange id="once">
-                    <value> 1 </value>
-                </vectorRange>
-            </listOfRanges>
-            <listOfSubTasks>
-                <subTask order="1" task="task1"/>
-            </listOfSubTasks>
-        </repeatedTask>
         <task id="task1" modelReference="model" simulationReference="simulation1"/>
     </listOfTasks>
     <listOfDataGenerators>

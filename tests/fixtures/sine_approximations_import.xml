@@ -18,6 +18,9 @@
     <variable id="deriv_approx" units="dimensionless" name="sin2" interface="public_and_private"/>
     <variable id="deriv_approx_initial_value" units="dimensionless" name="deriv_approx_initial_value" initial_value="0" interface="public_and_private"/>
     <variable id="parabolic_approx" name="sin3" units="dimensionless" interface="public_and_private"/>
+    <variable name="amp1" interface="public" initial_value="2.0" units="dimensionless"/>
+    <variable name="amp2" interface="public" initial_value="3.0" units="dimensionless"/>
+    <variable name="amp3" interface="public" initial_value="2.5" units="dimensionless"/>
   </component>
 
   <encapsulation>
@@ -32,17 +35,20 @@
   <connection component_1="actual_sin" component_2="main">
     <map_variables variable_1="sin" variable_2="sin1"/>
     <map_variables variable_1="x" variable_2="x"/>
+    <map_variables variable_1="amplitude" variable_2="amp1"/>
   </connection>
 
   <connection component_1="deriv_approx_sin" component_2="main">
     <map_variables variable_1="sin" variable_2="sin2"/>
     <map_variables variable_1="x" variable_2="x"/>
     <map_variables variable_1="sin_initial_value" variable_2="deriv_approx_initial_value"/>
+    <map_variables variable_1="amplitude" variable_2="amp2"/>
   </connection>
 
   <connection component_1="parabolic_approx_sin" component_2="main">
     <map_variables variable_1="sin" variable_2="sin3"/>
     <map_variables variable_1="x" variable_2="x"/>
+    <map_variables variable_1="amplitude" variable_2="amp3"/>
   </connection>
 
 </model>

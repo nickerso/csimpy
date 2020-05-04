@@ -5,14 +5,18 @@
     <variable id="x" units="dimensionless" name="x" interface="public_and_private"/>
     <variable id="sin" units="dimensionless" name="sin" initial_value="sin_initial_value" interface="public_and_private"/>
     <variable units="dimensionless" name="sin_initial_value" interface="public_and_private"/>
+    <variable name="amplitude" units="dimensionless" interface="public"/>
     <math xmlns="http://www.w3.org/1998/Math/MathML">
       <apply><eq/>
         <apply><diff/>
           <bvar><ci>x</ci></bvar>
           <ci>sin</ci>
         </apply>
-        <apply><cos/>
-          <ci>x</ci>
+        <apply><times/>
+          <ci>amplitude</ci>
+          <apply><cos/>
+            <ci>x</ci>
+          </apply>
         </apply>
       </apply>
     </math>

@@ -4,11 +4,15 @@
   <component name="sin" id="sin">
     <variable name="x" units="dimensionless" interface="public_and_private"/>
     <variable id="sin" units="dimensionless" name="sin" interface="public_and_private"/>
+    <variable name="amplitude" units="dimensionless" interface="public"/>
     <math xmlns="http://www.w3.org/1998/Math/MathML">
       <apply id="actual_sin"><eq/>
         <ci>sin</ci>
-        <apply><sin/>
-          <ci>x</ci>
+        <apply><times/>
+          <ci>amplitude</ci>
+          <apply><sin/>
+            <ci>x</ci>
+          </apply>
         </apply>
       </apply>
     </math>
