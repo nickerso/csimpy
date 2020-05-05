@@ -28,12 +28,13 @@
         </model>
     </listOfModels>
     <listOfTasks>
-        <task id="task1" modelReference="model" simulationReference="simulation1"/>
+        <task id="task1" modelReference="original_model" simulationReference="simulation1"/>
+        <task id="task2" modelReference="changed_amp1" simulationReference="simulation1"/>
     </listOfTasks>
     <listOfDataGenerators>
         <dataGenerator id="xDataGenerator1_1">
             <listOfVariables>
-                <variable id="xVariable1_1" target="/cellml:model/cellml:component[@name='main']/cellml:variable[@name='x']" taskReference="repeatedTask"/>
+                <variable id="xVariable1_1" target="/cellml:model/cellml:component[@name='main']/cellml:variable[@name='x']" taskReference="task1"/>
             </listOfVariables>
             <math xmlns="http://www.w3.org/1998/Math/MathML">
                 <ci> xVariable1_1 </ci>
@@ -41,15 +42,23 @@
         </dataGenerator>
         <dataGenerator id="yDataGenerator1_1">
             <listOfVariables>
-                <variable id="yVariable1_1" target="/cellml:model/cellml:component[@name='main']/cellml:variable[@name='sin1']" taskReference="repeatedTask"/>
+                <variable id="yVariable1_1" target="/cellml:model/cellml:component[@name='main']/cellml:variable[@name='sin1']" taskReference="task1"/>
             </listOfVariables>
             <math xmlns="http://www.w3.org/1998/Math/MathML">
                 <ci> yVariable1_1 </ci>
             </math>
         </dataGenerator>
+        <dataGenerator id="yDataGenerator1_1_mod">
+            <listOfVariables>
+                <variable id="yVariable1_1_mod" target="/cellml:model/cellml:component[@name='main']/cellml:variable[@name='sin1']" taskReference="task2"/>
+            </listOfVariables>
+            <math xmlns="http://www.w3.org/1998/Math/MathML">
+                <ci> yVariable1_1_mod </ci>
+            </math>
+        </dataGenerator>
         <dataGenerator id="xDataGenerator1_2">
             <listOfVariables>
-                <variable id="xVariable1_2" target="/cellml:model/cellml:component[@name='main']/cellml:variable[@name='x']" taskReference="repeatedTask"/>
+                <variable id="xVariable1_2" target="/cellml:model/cellml:component[@name='main']/cellml:variable[@name='x']" taskReference="task1"/>
             </listOfVariables>
             <math xmlns="http://www.w3.org/1998/Math/MathML">
                 <ci> xVariable1_2 </ci>
@@ -57,7 +66,7 @@
         </dataGenerator>
         <dataGenerator id="yDataGenerator1_2">
             <listOfVariables>
-                <variable id="yVariable1_2" target="/cellml:model/cellml:component[@name='main']/cellml:variable[@name='sin2']" taskReference="repeatedTask"/>
+                <variable id="yVariable1_2" target="/cellml:model/cellml:component[@name='main']/cellml:variable[@name='sin2']" taskReference="task1"/>
             </listOfVariables>
             <math xmlns="http://www.w3.org/1998/Math/MathML">
                 <ci> yVariable1_2 </ci>
@@ -65,7 +74,7 @@
         </dataGenerator>
         <dataGenerator id="xDataGenerator1_3">
             <listOfVariables>
-                <variable id="xVariable1_3" target="/cellml:model/cellml:component[@name='main']/cellml:variable[@name='x']" taskReference="repeatedTask"/>
+                <variable id="xVariable1_3" target="/cellml:model/cellml:component[@name='main']/cellml:variable[@name='x']" taskReference="task1"/>
             </listOfVariables>
             <math xmlns="http://www.w3.org/1998/Math/MathML">
                 <ci> xVariable1_3 </ci>
@@ -73,7 +82,7 @@
         </dataGenerator>
         <dataGenerator id="yDataGenerator1_3">
             <listOfVariables>
-                <variable id="yVariable1_3" target="/cellml:model/cellml:component[@name='main']/cellml:variable[@name='sin3']" taskReference="repeatedTask"/>
+                <variable id="yVariable1_3" target="/cellml:model/cellml:component[@name='main']/cellml:variable[@name='sin3']" taskReference="task1"/>
             </listOfVariables>
             <math xmlns="http://www.w3.org/1998/Math/MathML">
                 <ci> yVariable1_3 </ci>
@@ -82,47 +91,6 @@
     </listOfDataGenerators>
     <listOfOutputs>
         <plot2D id="plot1">
-            <annotation>
-                <properties xmlns="http://www.opencor.ws/">
-                    <backgroundColor>#ffffff</backgroundColor>
-                    <fontSize>10</fontSize>
-                    <foregroundColor>#000000</foregroundColor>
-                    <height>1</height>
-                    <gridLines>
-                        <style>dot</style>
-                        <width>1</width>
-                        <color>#a0a0a4</color>
-                    </gridLines>
-                    <legend>true</legend>
-                    <pointCoordinates>
-                        <style>dash</style>
-                        <width>1</width>
-                        <color>#b0008080</color>
-                        <fontColor>#ffffff</fontColor>
-                    </pointCoordinates>
-                    <surroundingArea>
-                        <backgroundColor>#f0f0f0</backgroundColor>
-                        <foregroundColor>#000000</foregroundColor>
-                    </surroundingArea>
-                    <title/>
-                    <xAxis>
-                        <logarithmicScale>false</logarithmicScale>
-                        <title/>
-                    </xAxis>
-                    <yAxis>
-                        <logarithmicScale>false</logarithmicScale>
-                        <title/>
-                    </yAxis>
-                    <zoomRegion>
-                        <style>solid</style>
-                        <width>1</width>
-                        <color>#b0800000</color>
-                        <fontColor>#ffffff</fontColor>
-                        <filled>true</filled>
-                        <fillColor>#30ffff00</fillColor>
-                    </zoomRegion>
-                </properties>
-            </annotation>
             <listOfCurves>
                 <curve id="curve1_1" logX="false" logY="false" xDataReference="xDataGenerator1_1" yDataReference="yDataGenerator1_1">
                     <annotation>
@@ -144,6 +112,7 @@
                         </properties>
                     </annotation>
                 </curve>
+                <curve id="curve1_1_mod" logX="false" logY="false" xDataReference="xDataGenerator1_1" yDataReference="yDataGenerator1_1_mod"/>
                 <curve id="curve1_2" logX="false" logY="false" xDataReference="xDataGenerator1_2" yDataReference="yDataGenerator1_2">
                     <annotation>
                         <properties xmlns="http://www.opencor.ws/">
