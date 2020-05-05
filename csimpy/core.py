@@ -4,6 +4,8 @@ import libsedml
 import libcellml
 from lxml import etree
 
+from .utils import get_xpath_namespaces
+
 __all__ = ['execute_simulation_experiment']
 
 
@@ -53,14 +55,11 @@ def execute_simulation_experiment(sedml_file, output_directory):
             change = current.getChange(c)
             target = change.getTarget()
             print("Change target: " + target)
+            xmlns = get_xpath_namespaces(change)
             if change.getTypeCode() == libsedml.SEDML_CHANGE_ATTRIBUTE:
                 new_value = change.getNewValue()
                 print("Change attribute, new value: " + str(new_value))
-                result = model_tree.xpath(target, namespaces={
-                    'cellml': "http://www.cellml.org/cellml/2.0#",
-                    'xlink': "http://www.w3.org/1999/xlink",
-                    'mathml': "http://www.w3.org/1998/Math/MathML"
-                })
+                result = model_tree.xpath(target, namespaces=xmlns)
                 attribute = result[0]
                 attribute.getparent().attrib[attribute.attrname] = new_value
 
