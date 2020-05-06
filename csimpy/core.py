@@ -108,37 +108,77 @@ def execute_simulation_experiment(sedml_file, output_directory):
     data_generators = {}
     for i in range(0, doc.getNumDataGenerators()):
         current = doc.getDataGenerator(i)
-        print("\tDG id=", current.getId(), " math=", libsedml.formulaToString(current.getMath()), "\n")
-        if current.getNumVariables() > 1:
-            print("\tEncountered a data generator with more than one variable and I can't handle that yet: " +
-                  current.getId())
-            continue
-        v = current.getVariable(0)
-        t = v.getTaskReference()
-        if not t in tasks:
-            print("\tEncountered a non-existing task reference: " + t + "; for data generator: " + current.getId())
-            continue
-        xmlns = get_xpath_namespaces(v)
-        variable_element = models[tasks[t]['model']]['tree'].xpath(v.getTarget(), namespaces=xmlns)[0]
-        variable = {
-            'name': variable_element.attrib['name'],
-            'component': variable_element.getparent().attrib['name']
+        variables = {}
+        for v in range(0, current.getNumVariables()):
+            cv = current.getVariable(v)
+            t = cv.getTaskReference()
+            if not t in tasks:
+                print("\tEncountered a non-existing task reference: " + t + "; for data generator: " + current.getId())
+                continue
+            xmlns = get_xpath_namespaces(cv)
+            variable_element = models[tasks[t]['model']]['tree'].xpath(cv.getTarget(), namespaces=xmlns)[0]
+            variables[cv.getId()] = {
+                'name': variable_element.attrib['name'],
+                'component': variable_element.getparent().attrib['name']
+            }
+        data_generators[current.getId()] = {
+            'variables': variables,
+            'math': libsedml.formulaToString(current.getMath())
         }
-        print(variable)
 
-    print("\n")
-    print("The document has ", doc.getNumOutputs(), " output(s).", "\n")
+    outputs = {}
     for i in range(0, doc.getNumOutputs()):
         current = doc.getOutput(i)
         tc = current.getTypeCode()
         if tc == libsedml.SEDML_OUTPUT_REPORT:
             r = current
-            print("\tReport id=", current.getId(), " numDataSets=", r.getNumDataSets(), "\n")
+            dss = []
+            for d in range(0, r.getNumDataSets()):
+                ds = r.getDataSet(d)
+                label = ds.getLabel()
+                if label == '':
+                    label = ds.getId()
+                dg = r.getDataReference()
+                if not dg in data_generators:
+                    print("\tEncountered a non-existing dataGenerator reference: " + dg + "; for data set: " +
+                          ds.getId())
+                    continue
+                dss.append({
+                    'label': label,
+                    'dg': dg
+                })
+            outputs[r.getId()] = {
+                'type': libsedml.SEDML_OUTPUT_REPORT,
+                'data-sets': dss
+            }
         elif tc == libsedml.SEDML_OUTPUT_PLOT2D:
             p = current
-            print("\tPlot2d id=", current.getId(), " numCurves=", p.getNumCurves(), "\n")
-        elif tc == libsedml.SEDML_OUTPUT_PLOT3D:
-            p = current
-            print("\tPlot3d id=", current.getId(), " numSurfaces=", p.getNumSurfaces(), "\n")
+            curves = []
+            for c in range(0, p.getNumCurves()):
+                curve = p.getCurve(c)
+                label = curve.getName()
+                if label == '':
+                    label = curve.getId()
+                dgX = curve.getXDataReference()
+                if not dgX in data_generators:
+                    print("\tEncountered a non-existing X dataGenerator reference: " + dgX + "; for curve: " +
+                          curve.getId())
+                    continue
+                dgY = curve.getYDataReference()
+                if not dgY in data_generators:
+                    print("\tEncountered a non-existing Y dataGenerator reference: " + dgY + "; for curve: " +
+                          curve.getId())
+                    continue
+                curves.append({
+                    'label': label,
+                    'dgX': dgX,
+                    'dgY': dgY
+                })
+            outputs[p.getId()] = {
+                'type': libsedml.SEDML_OUTPUT_PLOT2D,
+                'curves': curves
+            }
         else:
             print("\tEncountered unknown output ", current.getId(), "\n")
+
+    print(outputs)
