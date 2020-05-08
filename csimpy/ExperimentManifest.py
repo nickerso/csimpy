@@ -77,7 +77,7 @@ class ExperimentManifest:
                     print(parser.error(e).referenceHeading())
             else:
                 self._models[current.getId()] = {
-                    'file': model_file,
+                    'location': model_file,
                     'tree': model_tree,
                     'cellml': model_string
                 }
@@ -177,3 +177,36 @@ class ExperimentManifest:
             else:
                 print("\tEncountered unknown output ", current.getId(), "\n")
 
+    def instantiate(self):
+        """
+        Instantiate the code required to execute this experiment. Will generate code for the CellML models
+        as well as the supporting code to pull out the data generators.
+        """
+        for id, m in self._models.items():
+            print("Instantiating model: " + id + "; with original source location: " + m['location'])
+            parser = libcellml.Parser()
+            model = parser.parseModel(m['cellml'])
+            # need to flatten before generating code
+            model_base = os.path.dirname(m['location']) + '/'
+            print("model_base: " + model_base)
+            if model.hasUnresolvedImports():
+                print("Model has unresolved imports.")
+            model.resolveImports(model_base)
+            if model.hasUnresolvedImports():
+                print("Model still has unresolved imports.")
+
+            model.flatten()
+            printer = libcellml.Printer()
+            serialised_model = printer.printModel(model)
+            print(serialised_model)
+            # generate Python code for the flattened model
+            generator = libcellml.Generator()
+            profile = libcellml.GeneratorProfile(libcellml.GeneratorProfile.Profile.PYTHON)
+            generator.setProfile(profile)
+            generator.processModel(model)
+            if generator.errorCount():
+                for e in range(0, generator.errorCount()):
+                    print(generator.error(e).description())
+                return False
+
+        return True

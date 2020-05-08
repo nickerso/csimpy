@@ -1,10 +1,7 @@
 import sys
 import os.path
 import libsedml
-import libcellml
-from lxml import etree
 
-from .utils import get_xpath_namespaces
 from .ExperimentManifest import ExperimentManifest
 
 
@@ -32,3 +29,6 @@ def execute_simulation_experiment(sedml_file, output_directory):
 
     manifest = ExperimentManifest()
     manifest.build(doc, model_base)
+    if not manifest.instantiate():
+        print("There was an error instantiating the experiment manifest.")
+        sys.exit(3)
