@@ -4,7 +4,7 @@ import libsedml
 import libcellml
 from lxml import etree
 
-from .utils import get_xpath_namespaces
+from .utils import get_xpath_namespaces, module_from_string
 
 
 class ExperimentManifest:
@@ -187,18 +187,13 @@ class ExperimentManifest:
             parser = libcellml.Parser()
             model = parser.parseModel(m['cellml'])
             # need to flatten before generating code
+            # see https://github.com/cellml/libcellml/issues/592 as to why the '/' is required
             model_base = os.path.dirname(m['location']) + '/'
-            print("model_base: " + model_base)
-            if model.hasUnresolvedImports():
-                print("Model has unresolved imports.")
             model.resolveImports(model_base)
             if model.hasUnresolvedImports():
                 print("Model still has unresolved imports.")
-
+                return False
             model.flatten()
-            printer = libcellml.Printer()
-            serialised_model = printer.printModel(model)
-            print(serialised_model)
             # generate Python code for the flattened model
             generator = libcellml.Generator()
             profile = libcellml.GeneratorProfile(libcellml.GeneratorProfile.Profile.PYTHON)
@@ -208,5 +203,13 @@ class ExperimentManifest:
                 for e in range(0, generator.errorCount()):
                     print(generator.error(e).description())
                 return False
+            implementation_code = generator.implementationCode()
+            module_name = "csimpy_generated_module__" + id
+            module = module_from_string(module_name, implementation_code)
+            rates = module.create_states_array()
+            print("   VARIABLE OF INTEGRATION (units)")
+            print("--------------------------------------------------------------------")
+            print("      {} ({})".format(module.VOI_INFO['name'],
+                                             module.VOI_INFO['units']))
 
         return True
