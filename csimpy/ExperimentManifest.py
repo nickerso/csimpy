@@ -4,7 +4,11 @@ import libsedml
 import libcellml
 from lxml import etree
 
-from .utils import get_xpath_namespaces, module_from_string
+from .utils import \
+    get_xpath_namespaces, \
+    module_from_string, \
+    get_array_index_for_variable, \
+    get_array_index_for_equivalent_variable
 
 
 class ExperimentManifest:
@@ -116,7 +120,8 @@ class ExperimentManifest:
                 variable_element = model_tree.xpath(cv.getTarget(), namespaces=xmlns)[0]
                 variables[cv.getId()] = {
                     'name': variable_element.attrib['name'],
-                    'component': variable_element.getparent().attrib['name']
+                    'component': variable_element.getparent().attrib['name'],
+                    'task': t
                 }
             self._data_generators[current.getId()] = {
                 'variables': variables,
@@ -204,12 +209,29 @@ class ExperimentManifest:
                     print(generator.error(e).description())
                 return False
             implementation_code = generator.implementationCode()
-            module_name = "csimpy_generated_module__" + id
-            module = module_from_string(module_name, implementation_code)
-            rates = module.create_states_array()
-            print("   VARIABLE OF INTEGRATION (units)")
-            print("--------------------------------------------------------------------")
-            print("      {} ({})".format(module.VOI_INFO['name'],
-                                             module.VOI_INFO['units']))
+            module = module_from_string(implementation_code)
+
+            #
+            # Need to take different modules for variables into account...
+            #
+
+            # Generate the method for getting the data generator values
+            # map the data generators to variables in the generated code
+            arrays = ["dummy", "voi", "state", "variable"]
+            for dgid, dg in self._data_generators.items():
+                print("Mapping data generator: {}".format(dgid))
+                for vid, v in dg['variables'].items():
+                    print("Mapping variable {}: {} / {}".format(vid, v['component'], v['name']))
+                    index, array = get_array_index_for_variable(module, v['component'], v['name'])
+                    if array > 0:
+                        print("Found at index: {}; in array: {}".format(index, arrays[array]))
+                    if array < 0:
+                        # search for equivalent variables in the flattened model
+                        component = model.component(v['component'], True)
+                        variable = component.variable(v['name'])
+                        index, array = get_array_index_for_equivalent_variable(module, variable)
+                        if array > 0:
+                            print("Found equivalent variable at index: {}; in array: {}".format(index, arrays[array]))
+
 
         return True
