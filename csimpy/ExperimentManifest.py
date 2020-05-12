@@ -210,6 +210,17 @@ class ExperimentManifest:
                 return False
             implementation_code = generator.implementationCode()
             module = module_from_string(implementation_code)
+            # test module is valid
+            if module.__version__:
+                if module.__version__ != "0.1.0":
+                    print("Unexpected instantiated module version: " + module.__version__)
+                    return False
+            else:
+                print("Unable to determin instantiated module version")
+                return False
+            # store the CellML model and the instantiated implementation
+            m['instantiated-cellml'] = model
+            m['instantiated-module'] = module
 
             #
             # Need to take different modules for variables into account...
