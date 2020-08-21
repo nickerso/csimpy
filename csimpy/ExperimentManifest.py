@@ -1,8 +1,11 @@
 import sys
+import csv
 import os.path
 import libsedml
 import libcellml
 from lxml import etree
+from scipy import integrate
+import matplotlib.pyplot as plt
 
 from .utils import \
     get_xpath_namespaces, \
@@ -63,8 +66,8 @@ class ExperimentManifest:
                 if change.getTypeCode() == libsedml.SEDML_CHANGE_ATTRIBUTE:
                     new_value = change.getNewValue()
                     result = model_tree.xpath(target, namespaces=xmlns)
-                    attribute = result[0]
-                    attribute.getparent().attrib[attribute.attrname] = new_value
+                    attribute = result[0] # NEED TO UNDERSTAND
+                    attribute.getparent().attrib[attribute.attrname] = new_value # NEED TO UNDERSTAND
                 else:
                     print("\tEncountered unknown model change for model: " + current.getId())
                     continue  # ignore for now...
@@ -194,11 +197,12 @@ class ExperimentManifest:
             # need to flatten before generating code
             # see https://github.com/cellml/libcellml/issues/592 as to why the '/' is required
             model_base = os.path.dirname(m['location']) + '/'
-            model.resolveImports(model_base)
+            importer = libcellml.Importer()
+            importer.resolveImports(model, model_base)
             if model.hasUnresolvedImports():
                 print("Model still has unresolved imports.")
                 return False
-            model.flatten()
+            importer.flattenModel(model)
             # generate Python code for the flattened model
             generator = libcellml.Generator()
             profile = libcellml.GeneratorProfile(libcellml.GeneratorProfile.Profile.PYTHON)
@@ -211,8 +215,12 @@ class ExperimentManifest:
             implementation_code = generator.implementationCode()
             module = module_from_string(implementation_code)
 
+            print(implementation_code)
+            print("module: ", module)
+            print("module function: ", module.compute_rates)
+
             #
-            # Need to take different modules for variables into account...
+            # Andre: Need to take different modules for variables into account...
             #
 
             # Generate the method for getting the data generator values
@@ -233,5 +241,42 @@ class ExperimentManifest:
                         if array > 0:
                             print("Found equivalent variable at index: {}; in array: {}".format(index, arrays[array]))
 
+            # accessing python code
+            start = self._simulations['simulation1']['start']
+            end = self._simulations['simulation1']['end']
+            numpoints = self._simulations['simulation1']['numPoints']
+
+            stepsize = (end - start) / numpoints
+            print(start, end, numpoints, stepsize)
+
+            states = module.create_states_array()
+            variables = module.create_variables_array()
+            module.initialize_states_and_constants(states, variables)
+
+            def func(t, y):
+                rates = module.create_states_array()
+                module.compute_rates(t, y, rates, variables)
+                return rates
+
+            solution = integrate.solve_ivp(func, [start, end], states, method='LSODA', max_step=stepsize, atol=1e-4,
+                                           rtol=1e-6)
+            print(solution.t)
+            print(solution.y)
+
+            # saving data in a csv
+            with open('./csimpy/data.csv', 'w', newline='') as csvfile:
+                spamwriter = csv.writer(csvfile, delimiter=' ', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+                for i in range(0, len(solution.t)):
+                    spamwriter.writerow([solution.t[i], solution.y[0][i]])
+
+            # plotting a graph
+            fig, ax = plt.subplots()
+            ax.plot(solution.t, solution.y[0], label='Line 1')
+            ax.set_xlabel('t')
+            ax.set_ylabel('y')
+            ax.set_title('Some Title')
+            ax.legend()
+
+            fig.savefig('./csimpy/figure.png')
 
         return True
