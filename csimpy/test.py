@@ -121,13 +121,22 @@ states = create_states_array()
 variables = create_variables_array()
 initialize_states_and_constants(states, variables)
 
+compute_computed_constants(variables) # added this line
+
+temp = []
 def func(t, y):
     rates = create_states_array()
     compute_rates(t, y, rates, variables)
+
+    compute_variables(t, y, rates, variables) # added this line
+    print("variables[22]: ", variables[22])
+    temp.append(variables[22])
+
     return rates
 
-#y0 = np.array([1])
-
+print("start: ", start)
+print("end: ", end)
+print("states: ", states)
 solution = integrate.solve_ivp(func,[start, end], states, method='LSODA', max_step=stepsize, atol=1e-4, rtol=1e-6)
 
 print(solution.t)
@@ -135,7 +144,7 @@ print(solution.y)
 
 # graph
 fig, ax = plt.subplots()
-ax.plot(solution.t, solution.y[0], label='Line 1')
+ax.plot(solution.y[0], temp, label='Line 1')
 ax.set_xlabel('t')
 ax.set_ylabel('y')
 ax.set_title('Some Title')
@@ -163,24 +172,24 @@ fig.savefig('test.png')
 # fig2.savefig('test.png')
 
 # convert cellml1.0 or 1.1 to 2.0
-with open('../tests/fixtures/sine_approximations_import.xml') as f:
-    read_data = f.read()
-f.close()
-
-p = Parser()
-importedModel = p.parseModel(read_data)
-
-# parsing cellml 1.0 or 1.1 to 2.0
-dom = ET.fromstring(read_data.encode("utf-8"))
-xslt = ET.parse("../tests/fixtures/cellml1to2.xsl")
-transform = ET.XSLT(xslt)
-newdom = transform(dom)
-
-mstr = ET.tostring(newdom, pretty_print=True)
-mstr = mstr.decode("utf-8")
-
-# parse the string representation of the model to access by libcellml
-importedModel = p.parseModel(mstr)
-
-f = open('../tests/fixtures/sine_approximations_import.xml', 'w')
-f.write(mstr)
+# with open('../tests/fixtures/chang_fujita_1999.xml') as f:
+#     read_data = f.read()
+# f.close()
+#
+# p = Parser()
+# importedModel = p.parseModel(read_data)
+#
+# # parsing cellml 1.0 or 1.1 to 2.0
+# dom = ET.fromstring(read_data.encode("utf-8"))
+# xslt = ET.parse("../tests/fixtures/cellml1to2.xsl")
+# transform = ET.XSLT(xslt)
+# newdom = transform(dom)
+#
+# mstr = ET.tostring(newdom, pretty_print=True)
+# mstr = mstr.decode("utf-8")
+#
+# # parse the string representation of the model to access by libcellml
+# importedModel = p.parseModel(mstr)
+#
+# f = open('../tests/fixtures/chang_fujita_1999.xml', 'w')
+# f.write(mstr)
