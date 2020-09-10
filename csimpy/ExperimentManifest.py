@@ -1,8 +1,11 @@
 import sys
+import csv
 import os.path
 import libsedml
 import libcellml
 from lxml import etree
+from scipy import integrate
+import matplotlib.pyplot as plt
 
 from .utils import \
     get_xpath_namespaces, \
@@ -63,8 +66,8 @@ class ExperimentManifest:
                 if change.getTypeCode() == libsedml.SEDML_CHANGE_ATTRIBUTE:
                     new_value = change.getNewValue()
                     result = model_tree.xpath(target, namespaces=xmlns)
-                    attribute = result[0]
-                    attribute.getparent().attrib[attribute.attrname] = new_value
+                    attribute = result[0] # NEED TO UNDERSTAND
+                    attribute.getparent().attrib[attribute.attrname] = new_value # NEED TO UNDERSTAND
                 else:
                     print("\tEncountered unknown model change for model: " + current.getId())
                     continue  # ignore for now...
@@ -108,9 +111,11 @@ class ExperimentManifest:
         for i in range(0, sedml.getNumDataGenerators()):
             current = sedml.getDataGenerator(i)
             variables = {}
+
             for v in range(0, current.getNumVariables()):
                 cv = current.getVariable(v)
                 t = cv.getTaskReference()
+
                 if not t in self._tasks:
                     print("\tEncountered a non-existing task reference: " + t + "; for data generator: " +
                           current.getId())
@@ -118,6 +123,7 @@ class ExperimentManifest:
                 xmlns = get_xpath_namespaces(cv)
                 model_tree = self._models[self._tasks[t]['model']]['tree']
                 variable_element = model_tree.xpath(cv.getTarget(), namespaces=xmlns)[0]
+
                 variables[cv.getId()] = {
                     'name': variable_element.attrib['name'],
                     'component': variable_element.getparent().attrib['name'],
@@ -187,6 +193,7 @@ class ExperimentManifest:
         Instantiate the code required to execute this experiment. Will generate code for the CellML models
         as well as the supporting code to pull out the data generators.
         """
+
         for id, m in self._models.items():
             print("Instantiating model: " + id + "; with original source location: " + m['location'])
             parser = libcellml.Parser()
@@ -194,11 +201,12 @@ class ExperimentManifest:
             # need to flatten before generating code
             # see https://github.com/cellml/libcellml/issues/592 as to why the '/' is required
             model_base = os.path.dirname(m['location']) + '/'
-            model.resolveImports(model_base)
+            importer = libcellml.Importer()
+            importer.resolveImports(model, model_base)
             if model.hasUnresolvedImports():
                 print("Model still has unresolved imports.")
                 return False
-            model.flatten()
+            importer.flattenModel(model)
             # generate Python code for the flattened model
             generator = libcellml.Generator()
             profile = libcellml.GeneratorProfile(libcellml.GeneratorProfile.Profile.PYTHON)
@@ -211,18 +219,25 @@ class ExperimentManifest:
             implementation_code = generator.implementationCode()
             module = module_from_string(implementation_code)
 
+            print(implementation_code)
+            print("module: ", module)
+            print("module function: ", module.compute_rates)
+
             #
-            # Need to take different modules for variables into account...
+            # Andre: Need to take different modules for variables into account...
             #
 
             # Generate the method for getting the data generator values
             # map the data generators to variables in the generated code
+            indexArray = []
             arrays = ["dummy", "voi", "state", "variable"]
             for dgid, dg in self._data_generators.items():
                 print("Mapping data generator: {}".format(dgid))
                 for vid, v in dg['variables'].items():
                     print("Mapping variable {}: {} / {}".format(vid, v['component'], v['name']))
                     index, array = get_array_index_for_variable(module, v['component'], v['name'])
+                    # indexArray - index, voi/state/variable, component name, variable name
+                    indexArray.append([index, arrays[array], v['component'], v['name']])
                     if array > 0:
                         print("Found at index: {}; in array: {}".format(index, arrays[array]))
                     if array < 0:
@@ -233,5 +248,86 @@ class ExperimentManifest:
                         if array > 0:
                             print("Found equivalent variable at index: {}; in array: {}".format(index, arrays[array]))
 
+            # accessing python code
+            start = self._simulations['simulation1']['start']
+            end = self._simulations['simulation1']['end']
+            numpoints = self._simulations['simulation1']['numPoints']
+
+            stepsize = (end - start) / numpoints
+            print(start, end, numpoints, stepsize)
+
+            states = module.create_states_array()
+            variables = module.create_variables_array()
+            module.initialize_states_and_constants(states, variables)
+
+            # voiArray = [] # store index values of voi
+            # stateArray = [] # store index values of state
+            # var1Array = [] # store first variable's values if applicable
+            # var2Array = [] # store 2nd variable's values if applicable
+            temp = []
+            def func(t, y):
+                rates = module.create_states_array()
+                module.compute_rates(t, y, rates, variables)
+
+                module.compute_variables(t, y, rates, variables)
+                print("variables[22]: ", variables[22])
+                temp.append(variables[22])
+
+                return rates
+
+            solution = integrate.solve_ivp(func, [start, end], states, method='LSODA', max_step=stepsize, atol=1e-4,
+                                           rtol=1e-6)
+
+            # # indexArray - index, voi/state/variable, component name, variable name
+            # flag1 = True
+            # flag2 = True
+            # for elem in indexArray:
+            #     if elem[1] == 'voi':
+            #         voiArray.append(elem[0])
+            #     elif elem[1] == 'state':
+            #         stateArray.append(elem[0])
+            #     elif elem[1] == 'variable' and flag1:
+            #         module.compute_variables(t, y, rates, variables)
+            #         var1Array.append(variables[elem[0]])
+            #         flag1 = False
+            #     elif elem[1] == 'variable' and flag2:
+            #         module.compute_variables(t, y, rates, variables)
+            #         var2Array.append(variables[elem[0]])
+            #         flag2 = False
+
+            print(solution.t)
+            print(solution.y)
+
+            print("indexArray: ", indexArray)
+
+            # saving data in a csv
+            with open('./csimpy/data.csv', 'w', newline='') as csvfile:
+                spamwriter = csv.writer(csvfile, delimiter=' ', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+                for i in range(0, len(solution.t)):
+                    spamwriter.writerow([solution.t[i], solution.y[0][i]])
+
+            # plotting a graph
+            fig, ax = plt.subplots()
+            ax.plot(solution.y[0], temp, label='Line 1')
+
+            # if len(voiArray) > 0 and len(stateArray) > 0:
+            #     print('one')
+            #     ax.plot(solution.t, solution.y[stateArray[0]], label='Line 1')
+            # elif len(stateArray) > 0 and len(var1Array) > 0:
+            #     print('two')
+            #     ax.plot(solution.y[stateArray[0]], var1Array, label='Line 1')
+            # elif len(var1Array) > 0 and len(var2Array) > 0:
+            #     print('three')
+            #     ax.plot(var1Array, var2Array, label='Line 1')
+
+            ax.set_xlabel('x-axis label')
+            ax.set_ylabel('y-axis label')
+            ax.set_title('Some Title')
+            ax.legend()
+
+            fig.savefig('./csimpy/figure.png')
+
+            print(self._data_generators)
+            print(len(self._data_generators))
 
         return True

@@ -1,0 +1,582 @@
+<model xmlns="http://www.cellml.org/cellml/2.0#" xmlns:cellml="http://www.cellml.org/cellml/2.0#" xmlns:xlink="http://www.w3.org/1999/xlink" name="weinstein_1995" id="weinstein_1995">
+  <units name="mM_per_s">
+    <unit exponent="-1.0" units="second"/>
+    <unit units="mM"/>
+  </units>
+  <units name="cm2">
+    <unit exponent="2.0" prefix="centi" units="metre"/>
+  </units>
+  <units name="nmol">
+    <unit prefix="nano" units="mole"/>
+  </units>
+  <units name="cm">
+    <unit prefix="centi" units="metre"/>
+  </units>
+  <units name="mM">
+    <unit exponent="-1.0" units="litre"/>
+    <unit prefix="milli" units="mole"/>
+  </units>
+  <units name="per_s">
+    <unit exponent="-1.0" units="second"/>
+  </units>
+  <units name="nmol_per_s_per_cm2">
+    <unit units="nmol"/>
+    <unit exponent="-1.0" units="cm2"/>
+    <unit exponent="-1.0" units="second"/>
+  </units>
+  <units name="umol">
+    <unit prefix="micro" units="mole"/>
+  </units>
+  <units name="mmol">
+    <unit prefix="milli" units="mole"/>
+  </units>
+  <units name="M">
+    <unit exponent="-1.0" units="litre"/>
+    <unit units="mole"/>
+  </units>
+  <units name="mmol_per_s_per_cm2">
+    <unit exponent="-1.0" units="cm2"/>
+    <unit exponent="-1.0" units="second"/>
+    <unit units="mmol"/>
+  </units>
+  <component name="environment">
+    <variable id="environment.time" name="time" units="second" interface="public"/>
+  </component>
+  <component name="Concentrations">
+    <variable id="Concentrations.C_ext_Na" initial_value="0.1" name="C_ext_Na" units="mM" interface="public"/>
+    <variable id="Concentrations.C_ext_H" name="C_ext_H" units="mM" interface="public"/>
+    <variable id="Concentrations.C_ext_NH4" initial_value="0" name="C_ext_NH4" units="mM" interface="public"/>
+    <variable id="Concentrations.C_int_Na" initial_value="0" name="C_int_Na" units="mM" interface="public"/>
+    <variable id="Concentrations.C_int_H" initial_value="1e-3" name="C_int_H" units="mM" interface="public"/>
+    <variable id="Concentrations.C_int_NH4" initial_value="0" name="C_int_NH4" units="mM" interface="public"/>
+    <variable id="Concentrations.time" name="time" units="second" interface="public"/>
+    <variable id="Concentrations.pH_ext" initial_value="6" name="pH_ext" units="dimensionless"/>
+    <math xmlns="http://www.w3.org/1998/Math/MathML">
+      <apply>
+        <eq/>
+        <apply>
+          <diff/>
+          <bvar>
+            <ci>time</ci>
+          </bvar>
+          <ci>pH_ext</ci>
+        </apply>
+        <cn xmlns:cellml="http://www.cellml.org/cellml/1.0#" xmlns:ns_1="http://www.cellml.org/cellml/2.0#" ns_1:units="per_s">2</cn>
+      </apply>
+      <apply>
+        <eq/>
+        <ci>C_ext_H</ci>
+        <apply>
+          <times/>
+          <cn xmlns:cellml="http://www.cellml.org/cellml/1.0#" xmlns:ns_1="http://www.cellml.org/cellml/2.0#" type="e-notation" ns_1:units="mM">
+            1
+            <sep/>
+            3
+          </cn>
+          <apply>
+            <power/>
+            <cn xmlns:cellml="http://www.cellml.org/cellml/1.0#" xmlns:ns_1="http://www.cellml.org/cellml/2.0#" ns_1:units="dimensionless">10</cn>
+            <apply>
+              <minus/>
+              <ci>pH_ext</ci>
+            </apply>
+          </apply>
+        </apply>
+      </apply>
+    </math>
+  </component>
+  <component name="NHE3_Parameters">
+    <variable id="NHE3_Parameters.XTxP0_NHE3_Na" initial_value="1.6e-3" name="XTxP0_NHE3_Na" units="nmol_per_s_per_cm2" interface="public"/>
+    <variable id="NHE3_Parameters.XTxP0_NHE3_H" initial_value="0.48e-3" name="XTxP0_NHE3_H" units="nmol_per_s_per_cm2" interface="public"/>
+    <variable id="NHE3_Parameters.XTxP0_NHE3_NH4" initial_value="1.6e-3" name="XTxP0_NHE3_NH4" units="nmol_per_s_per_cm2" interface="public"/>
+    <variable id="NHE3_Parameters.K_NHE3_Na" initial_value="30" name="K_NHE3_Na" units="mM" interface="public"/>
+    <variable id="NHE3_Parameters.K_NHE3_H" initial_value="72e-6" name="K_NHE3_H" units="mM" interface="public"/>
+    <variable id="NHE3_Parameters.K_NHE3_NH4" initial_value="0.027e3" name="K_NHE3_NH4" units="mM" interface="public"/>
+  </component>
+  <component name="NHE3">
+    <variable id="NHE3.C_ext_Na" name="C_ext_Na" units="mM" interface="public"/>
+    <variable id="NHE3.C_ext_H" name="C_ext_H" units="mM" interface="public"/>
+    <variable id="NHE3.C_ext_NH4" name="C_ext_NH4" units="mM" interface="public"/>
+    <variable id="NHE3.C_int_Na" name="C_int_Na" units="mM" interface="public"/>
+    <variable id="NHE3.C_int_H" name="C_int_H" units="mM" interface="public"/>
+    <variable id="NHE3.C_int_NH4" name="C_int_NH4" units="mM" interface="public"/>
+    <variable id="NHE3.XTxP0_NHE3_Na" name="XTxP0_NHE3_Na" units="nmol_per_s_per_cm2" interface="public"/>
+    <variable id="NHE3.XTxP0_NHE3_H" name="XTxP0_NHE3_H" units="nmol_per_s_per_cm2" interface="public"/>
+    <variable id="NHE3.XTxP0_NHE3_NH4" name="XTxP0_NHE3_NH4" units="nmol_per_s_per_cm2" interface="public"/>
+    <variable id="NHE3.XTxP_NHE_Na" name="XTxP_NHE_Na" units="nmol_per_s_per_cm2"/>
+    <variable id="NHE3.XTxP_NHE_H" name="XTxP_NHE_H" units="nmol_per_s_per_cm2"/>
+    <variable id="NHE3.XTxP_NHE_NH4" name="XTxP_NHE_NH4" units="nmol_per_s_per_cm2"/>
+    <variable id="NHE3.K_NHE3_Na" name="K_NHE3_Na" units="mM" interface="public"/>
+    <variable id="NHE3.K_NHE3_H" name="K_NHE3_H" units="mM" interface="public"/>
+    <variable id="NHE3.K_NHE3_NH4" name="K_NHE3_NH4" units="mM" interface="public"/>
+    <variable id="NHE3.alpha_ext_Na" name="alpha_ext_Na" units="dimensionless"/>
+    <variable id="NHE3.beta_ext_H" name="beta_ext_H" units="dimensionless"/>
+    <variable id="NHE3.gamma_ext_NH4" name="gamma_ext_NH4" units="dimensionless"/>
+    <variable id="NHE3.alpha_int_Na" name="alpha_int_Na" units="dimensionless"/>
+    <variable id="NHE3.beta_int_H" name="beta_int_H" units="dimensionless"/>
+    <variable id="NHE3.gamma_int_NH4" name="gamma_int_NH4" units="dimensionless"/>
+    <variable id="NHE3.sum_NHE3" name="sum_NHE3" units="nmol_per_s_per_cm2"/>
+    <variable id="NHE3.J_NHE3_Na" name="J_NHE3_Na" units="nmol_per_s_per_cm2" interface="public"/>
+    <variable id="NHE3.J_NHE3_H" name="J_NHE3_H" units="nmol_per_s_per_cm2" interface="public"/>
+    <variable id="NHE3.J_NHE3_NH4" name="J_NHE3_NH4" units="nmol_per_s_per_cm2" interface="public"/>
+    <variable id="NHE3.J_NHE3_Na_Max" name="J_NHE3_Na_Max" units="nmol_per_s_per_cm2"/>
+    <variable id="NHE3.plot_b" name="plot_b" units="dimensionless"/>
+    <variable id="NHE3.plot_a" name="plot_a" units="dimensionless"/>
+    <variable id="NHE3.K_H" name="K_H" units="dimensionless"/>
+    <math xmlns="http://www.w3.org/1998/Math/MathML">
+      <apply>
+        <eq/>
+        <ci>alpha_ext_Na</ci>
+        <apply>
+          <divide/>
+          <ci>C_ext_Na</ci>
+          <ci>K_NHE3_Na</ci>
+        </apply>
+      </apply>
+      <apply>
+        <eq/>
+        <ci>beta_ext_H</ci>
+        <apply>
+          <divide/>
+          <ci>C_ext_H</ci>
+          <ci>K_NHE3_H</ci>
+        </apply>
+      </apply>
+      <apply>
+        <eq/>
+        <ci>gamma_ext_NH4</ci>
+        <apply>
+          <divide/>
+          <ci>C_ext_NH4</ci>
+          <ci>K_NHE3_NH4</ci>
+        </apply>
+      </apply>
+      <apply>
+        <eq/>
+        <ci>alpha_int_Na</ci>
+        <apply>
+          <divide/>
+          <ci>C_int_Na</ci>
+          <ci>K_NHE3_Na</ci>
+        </apply>
+      </apply>
+      <apply>
+        <eq/>
+        <ci>beta_int_H</ci>
+        <apply>
+          <divide/>
+          <ci>C_int_H</ci>
+          <ci>K_NHE3_H</ci>
+        </apply>
+      </apply>
+      <apply>
+        <eq/>
+        <ci>gamma_int_NH4</ci>
+        <apply>
+          <divide/>
+          <ci>C_int_NH4</ci>
+          <ci>K_NHE3_NH4</ci>
+        </apply>
+      </apply>
+      <apply>
+        <eq/>
+        <ci>XTxP_NHE_Na</ci>
+        <apply>
+          <divide/>
+          <apply>
+            <times/>
+            <ci>XTxP0_NHE3_Na</ci>
+            <cn xmlns:cellml="http://www.cellml.org/cellml/1.0#" xmlns:ns_1="http://www.cellml.org/cellml/2.0#" ns_1:units="dimensionless">2</cn>
+            <ci>C_int_H</ci>
+          </apply>
+          <apply>
+            <plus/>
+            <ci>C_int_H</ci>
+            <cn xmlns:cellml="http://www.cellml.org/cellml/1.0#" xmlns:ns_1="http://www.cellml.org/cellml/2.0#" type="e-notation" ns_1:units="mM">
+              1
+              <sep/>
+              -6
+            </cn>
+          </apply>
+        </apply>
+      </apply>
+      <apply>
+        <eq/>
+        <ci>XTxP_NHE_H</ci>
+        <apply>
+          <divide/>
+          <apply>
+            <times/>
+            <ci>XTxP0_NHE3_H</ci>
+            <cn xmlns:cellml="http://www.cellml.org/cellml/1.0#" xmlns:ns_1="http://www.cellml.org/cellml/2.0#" ns_1:units="dimensionless">2</cn>
+            <ci>C_int_H</ci>
+          </apply>
+          <apply>
+            <plus/>
+            <ci>C_int_H</ci>
+            <cn xmlns:cellml="http://www.cellml.org/cellml/1.0#" xmlns:ns_1="http://www.cellml.org/cellml/2.0#" type="e-notation" ns_1:units="mM">
+              1
+              <sep/>
+              -6
+            </cn>
+          </apply>
+        </apply>
+      </apply>
+      <apply>
+        <eq/>
+        <ci>XTxP_NHE_NH4</ci>
+        <apply>
+          <divide/>
+          <apply>
+            <times/>
+            <ci>XTxP0_NHE3_NH4</ci>
+            <cn xmlns:cellml="http://www.cellml.org/cellml/1.0#" xmlns:ns_1="http://www.cellml.org/cellml/2.0#" ns_1:units="dimensionless">2</cn>
+            <ci>C_int_H</ci>
+          </apply>
+          <apply>
+            <plus/>
+            <ci>C_int_H</ci>
+            <cn xmlns:cellml="http://www.cellml.org/cellml/1.0#" xmlns:ns_1="http://www.cellml.org/cellml/2.0#" type="e-notation" ns_1:units="mM">
+              1
+              <sep/>
+              -6
+            </cn>
+          </apply>
+        </apply>
+      </apply>
+      <apply>
+        <eq/>
+        <ci>sum_NHE3</ci>
+        <apply>
+          <plus/>
+          <apply>
+            <times/>
+            <apply>
+              <plus/>
+              <cn xmlns:cellml="http://www.cellml.org/cellml/1.0#" xmlns:ns_1="http://www.cellml.org/cellml/2.0#" ns_1:units="dimensionless">1</cn>
+              <ci>alpha_ext_Na</ci>
+              <ci>beta_ext_H</ci>
+              <ci>gamma_ext_NH4</ci>
+            </apply>
+            <apply>
+              <plus/>
+              <apply>
+                <times/>
+                <ci>XTxP_NHE_Na</ci>
+                <ci>alpha_int_Na</ci>
+              </apply>
+              <apply>
+                <times/>
+                <ci>XTxP_NHE_H</ci>
+                <ci>beta_int_H</ci>
+              </apply>
+              <apply>
+                <times/>
+                <ci>XTxP_NHE_NH4</ci>
+                <ci>gamma_int_NH4</ci>
+              </apply>
+            </apply>
+          </apply>
+          <apply>
+            <times/>
+            <apply>
+              <plus/>
+              <cn xmlns:cellml="http://www.cellml.org/cellml/1.0#" xmlns:ns_1="http://www.cellml.org/cellml/2.0#" ns_1:units="dimensionless">1</cn>
+              <ci>alpha_int_Na</ci>
+              <ci>beta_int_H</ci>
+              <ci>gamma_int_NH4</ci>
+            </apply>
+            <apply>
+              <plus/>
+              <apply>
+                <times/>
+                <ci>XTxP_NHE_Na</ci>
+                <ci>alpha_ext_Na</ci>
+              </apply>
+              <apply>
+                <times/>
+                <ci>XTxP_NHE_H</ci>
+                <ci>beta_ext_H</ci>
+              </apply>
+              <apply>
+                <times/>
+                <ci>XTxP_NHE_NH4</ci>
+                <ci>gamma_ext_NH4</ci>
+              </apply>
+            </apply>
+          </apply>
+        </apply>
+      </apply>
+      <apply>
+        <eq/>
+        <ci>J_NHE3_Na</ci>
+        <apply>
+          <plus/>
+          <apply>
+            <times/>
+            <apply>
+              <divide/>
+              <apply>
+                <times/>
+                <ci>XTxP_NHE_Na</ci>
+                <ci>XTxP_NHE_H</ci>
+              </apply>
+              <ci>sum_NHE3</ci>
+            </apply>
+            <apply>
+              <minus/>
+              <apply>
+                <times/>
+                <ci>alpha_ext_Na</ci>
+                <ci>beta_int_H</ci>
+              </apply>
+              <apply>
+                <times/>
+                <ci>alpha_int_Na</ci>
+                <ci>beta_ext_H</ci>
+              </apply>
+            </apply>
+          </apply>
+          <apply>
+            <times/>
+            <apply>
+              <divide/>
+              <apply>
+                <times/>
+                <ci>XTxP_NHE_Na</ci>
+                <ci>XTxP_NHE_NH4</ci>
+              </apply>
+              <ci>sum_NHE3</ci>
+            </apply>
+            <apply>
+              <minus/>
+              <apply>
+                <times/>
+                <ci>alpha_ext_Na</ci>
+                <ci>gamma_int_NH4</ci>
+              </apply>
+              <apply>
+                <times/>
+                <ci>alpha_int_Na</ci>
+                <ci>gamma_ext_NH4</ci>
+              </apply>
+            </apply>
+          </apply>
+        </apply>
+      </apply>
+      <apply>
+        <eq/>
+        <ci>J_NHE3_H</ci>
+        <apply>
+          <plus/>
+          <apply>
+            <times/>
+            <apply>
+              <divide/>
+              <apply>
+                <times/>
+                <ci>XTxP_NHE_Na</ci>
+                <ci>XTxP_NHE_H</ci>
+              </apply>
+              <ci>sum_NHE3</ci>
+            </apply>
+            <apply>
+              <minus/>
+              <apply>
+                <times/>
+                <ci>alpha_int_Na</ci>
+                <ci>beta_ext_H</ci>
+              </apply>
+              <apply>
+                <times/>
+                <ci>alpha_ext_Na</ci>
+                <ci>beta_int_H</ci>
+              </apply>
+            </apply>
+          </apply>
+          <apply>
+            <times/>
+            <apply>
+              <divide/>
+              <apply>
+                <times/>
+                <ci>XTxP_NHE_H</ci>
+                <ci>XTxP_NHE_NH4</ci>
+              </apply>
+              <ci>sum_NHE3</ci>
+            </apply>
+            <apply>
+              <minus/>
+              <apply>
+                <times/>
+                <ci>beta_ext_H</ci>
+                <ci>gamma_int_NH4</ci>
+              </apply>
+              <apply>
+                <times/>
+                <ci>beta_int_H</ci>
+                <ci>gamma_ext_NH4</ci>
+              </apply>
+            </apply>
+          </apply>
+        </apply>
+      </apply>
+      <apply>
+        <eq/>
+        <ci>J_NHE3_NH4</ci>
+        <apply>
+          <plus/>
+          <apply>
+            <times/>
+            <apply>
+              <divide/>
+              <apply>
+                <times/>
+                <ci>XTxP_NHE_Na</ci>
+                <ci>XTxP_NHE_NH4</ci>
+              </apply>
+              <ci>sum_NHE3</ci>
+            </apply>
+            <apply>
+              <minus/>
+              <apply>
+                <times/>
+                <ci>alpha_int_Na</ci>
+                <ci>gamma_ext_NH4</ci>
+              </apply>
+              <apply>
+                <times/>
+                <ci>alpha_ext_Na</ci>
+                <ci>gamma_int_NH4</ci>
+              </apply>
+            </apply>
+          </apply>
+          <apply>
+            <times/>
+            <apply>
+              <divide/>
+              <apply>
+                <times/>
+                <ci>XTxP_NHE_H</ci>
+                <ci>XTxP_NHE_NH4</ci>
+              </apply>
+              <ci>sum_NHE3</ci>
+            </apply>
+            <apply>
+              <minus/>
+              <apply>
+                <times/>
+                <ci>gamma_ext_NH4</ci>
+                <ci>beta_int_H</ci>
+              </apply>
+              <apply>
+                <times/>
+                <ci>beta_ext_H</ci>
+                <ci>gamma_int_NH4</ci>
+              </apply>
+            </apply>
+          </apply>
+        </apply>
+      </apply>
+      <apply>
+        <eq/>
+        <ci>J_NHE3_Na_Max</ci>
+        <apply>
+          <divide/>
+          <apply>
+            <times/>
+            <ci>XTxP_NHE_Na</ci>
+            <ci>XTxP_NHE_H</ci>
+          </apply>
+          <apply>
+            <plus/>
+            <ci>XTxP_NHE_Na</ci>
+            <ci>XTxP_NHE_H</ci>
+          </apply>
+        </apply>
+      </apply>
+      <apply>
+        <eq/>
+        <ci>plot_a</ci>
+        <apply>
+          <divide/>
+          <ci>J_NHE3_Na</ci>
+          <ci>J_NHE3_Na_Max</ci>
+        </apply>
+      </apply>
+      <apply>
+        <eq/>
+        <ci>plot_b</ci>
+        <apply>
+          <divide/>
+          <cn xmlns:cellml="http://www.cellml.org/cellml/1.0#" xmlns:ns_1="http://www.cellml.org/cellml/2.0#" ns_1:units="dimensionless">1</cn>
+          <ci>plot_a</ci>
+        </apply>
+      </apply>
+      <apply>
+        <eq/>
+        <ci>K_H</ci>
+        <apply>
+          <divide/>
+          <apply>
+            <plus/>
+            <apply>
+              <times/>
+              <apply>
+                <plus/>
+                <cn xmlns:cellml="http://www.cellml.org/cellml/1.0#" xmlns:ns_1="http://www.cellml.org/cellml/2.0#" ns_1:units="dimensionless">1</cn>
+                <ci>alpha_ext_Na</ci>
+              </apply>
+              <ci>beta_int_H</ci>
+            </apply>
+            <apply>
+              <divide/>
+              <apply>
+                <times/>
+                <apply>
+                  <plus/>
+                  <cn xmlns:cellml="http://www.cellml.org/cellml/1.0#" xmlns:ns_1="http://www.cellml.org/cellml/2.0#" ns_1:units="dimensionless">1</cn>
+                  <ci>beta_int_H</ci>
+                </apply>
+                <ci>alpha_ext_Na</ci>
+                <ci>XTxP_NHE_Na</ci>
+              </apply>
+              <ci>XTxP_NHE_H</ci>
+            </apply>
+          </apply>
+          <apply>
+            <plus/>
+            <cn xmlns:cellml="http://www.cellml.org/cellml/1.0#" xmlns:ns_1="http://www.cellml.org/cellml/2.0#" ns_1:units="dimensionless">1</cn>
+            <apply>
+              <times/>
+              <cn xmlns:cellml="http://www.cellml.org/cellml/1.0#" xmlns:ns_1="http://www.cellml.org/cellml/2.0#" ns_1:units="dimensionless">2</cn>
+              <ci>beta_int_H</ci>
+            </apply>
+          </apply>
+        </apply>
+      </apply>
+    </math>
+  </component>
+  <connection component_1="Concentrations" component_2="NHE3">
+    
+    <map_variables variable_1="C_int_Na" variable_2="C_int_Na"/>
+    <map_variables variable_1="C_ext_NH4" variable_2="C_ext_NH4"/>
+    <map_variables variable_1="C_ext_H" variable_2="C_ext_H"/>
+    <map_variables variable_1="C_int_H" variable_2="C_int_H"/>
+    <map_variables variable_1="C_ext_Na" variable_2="C_ext_Na"/>
+    <map_variables variable_1="C_int_NH4" variable_2="C_int_NH4"/>
+  </connection>
+  <connection component_1="environment" component_2="Concentrations">
+    
+    <map_variables variable_1="time" variable_2="time"/>
+  </connection>
+  <connection component_1="NHE3_Parameters" component_2="NHE3">
+    
+    <map_variables variable_1="K_NHE3_Na" variable_2="K_NHE3_Na"/>
+    <map_variables variable_1="K_NHE3_NH4" variable_2="K_NHE3_NH4"/>
+    <map_variables variable_1="XTxP0_NHE3_H" variable_2="XTxP0_NHE3_H"/>
+    <map_variables variable_1="XTxP0_NHE3_Na" variable_2="XTxP0_NHE3_Na"/>
+    <map_variables variable_1="K_NHE3_H" variable_2="K_NHE3_H"/>
+    <map_variables variable_1="XTxP0_NHE3_NH4" variable_2="XTxP0_NHE3_NH4"/>
+  </connection>
+</model>
