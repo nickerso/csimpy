@@ -194,11 +194,12 @@ class ExperimentManifest:
             # need to flatten before generating code
             # see https://github.com/cellml/libcellml/issues/592 as to why the '/' is required
             model_base = os.path.dirname(m['location']) + '/'
-            model.resolveImports(model_base)
+            importer = libcellml.Importer()
+            importer.resolveImports(model, model_base)
             if model.hasUnresolvedImports():
                 print("Model still has unresolved imports.")
                 return False
-            model.flatten()
+            importer.flattenModel(model)
             # generate Python code for the flattened model
             generator = libcellml.Generator()
             profile = libcellml.GeneratorProfile(libcellml.GeneratorProfile.Profile.PYTHON)
