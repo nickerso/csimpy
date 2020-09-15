@@ -199,12 +199,12 @@ class ExperimentManifest:
             if model.hasUnresolvedImports():
                 print("Model still has unresolved imports.")
                 return False
-            importer.flattenModel(model)
+            flat_model = importer.flattenModel(model)
             # generate Python code for the flattened model
             generator = libcellml.Generator()
             profile = libcellml.GeneratorProfile(libcellml.GeneratorProfile.Profile.PYTHON)
             generator.setProfile(profile)
-            generator.processModel(model)
+            generator.processModel(flat_model)
             if generator.errorCount():
                 for e in range(0, generator.errorCount()):
                     print(generator.error(e).description())
@@ -217,7 +217,7 @@ class ExperimentManifest:
                     print("Unexpected instantiated module version: " + module.__version__)
                     return False
             else:
-                print("Unable to determin instantiated module version")
+                print("Unable to determine instantiated module version")
                 return False
             # store the CellML model and the instantiated implementation
             m['instantiated-cellml'] = model
