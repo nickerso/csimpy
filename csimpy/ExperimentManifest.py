@@ -10,6 +10,34 @@ from .utils import \
     get_array_index_for_variable, \
     get_array_index_for_equivalent_variable
 
+# convenience methods to help keep track of what each of these objects have in them...
+def print_simulation(id, s):
+    print("*# Simulation: " + id)
+    print("*#  type: " + libsedml.SedTypeCode_toString(s['type']))
+    print("*#  simulation algorithm: {}".format(s['kisao']))
+    print("*#  interval: {} .. [ {} --output--> {} ]; {} points".format(s['initial'], s['start'], s['end'],
+                                                                   s['numPoints']))
+
+def print_model(id, m):
+    print("*# Model: " + id)
+    print("*#   location: " + m['location'])
+    print("*#   ((model['tree']: XML DOM tree))")
+    print("*#   ((model['cellml']: string representation of the CellML XML))")
+
+def print_task(id, t):
+    print("*# Task: " + id)
+    print("*#   model reference: " + t['model'])
+    print("*#   simulation reference: " + t['simulation'])
+
+def print_datagenerator(id, dg):
+    print("*# Data generator: " + id)
+    print("*#   Formula: " + dg['math'])
+    print("*#   Variables:")
+    variables = dg['variables']
+    for vId, v in variables.items():
+        print("*#     Variable: " + vId)
+        print("*#       From task: " + v['task'])
+        print("*#       CellML variable: {} // {}".format(v['component'], v['name']))
 
 class ExperimentManifest:
 
@@ -36,15 +64,18 @@ class ExperimentManifest:
                 kisaoid = "none"
                 if tc.isSetAlgorithm():
                     kisaoid = tc.getAlgorithm().getKisaoID()
-                self._simulations[tc.getId()] = {
+                sId = tc.getId()
+                self._simulations[sId] = {
                     'type': libsedml.SEDML_SIMULATION_UNIFORMTIMECOURSE,
+                    'initial': tc.getInitialTime(),
                     'start': tc.getOutputStartTime(),
                     'end': tc.getOutputEndTime(),
                     'numPoints': tc.getNumberOfPoints(),
                     'kisao': kisaoid
                 }
+                print_simulation(sId, self._simulations[sId])
             else:
-                print("\tEncountered unknown simulation. ", current.getId(), "\n")
+                print("\tEncountered unknown simulation type. ", current.getId(), "\n")
 
         for i in range(0, sedml.getNumModels()):
             current = sedml.getModel(i)
@@ -80,11 +111,13 @@ class ExperimentManifest:
                     print(parser.error(e).description())
                     print(parser.error(e).referenceHeading())
             else:
-                self._models[current.getId()] = {
+                mId = current.getId()
+                self._models[mId] = {
                     'location': model_file,
                     'tree': model_tree,
                     'cellml': model_string
                 }
+                print_model(mId, self._models[mId])
 
         for i in range(0, sedml.getNumTasks()):
             current = sedml.getTask(i)
@@ -92,18 +125,20 @@ class ExperimentManifest:
                 print("\tEncountered unknown task type: " + libsedml.SedTypeCode_toString(current.getTypeCode())
                       + "; for task: " + current.getId())
                 continue
+            tId = current.getId()
             m = current.getModelReference()
             s = current.getSimulationReference()
             if not m in self._models:
-                print("\tEncountered a non-existing model reference: " + m + "; for task: " + current.getId())
+                print("\tEncountered a non-existing model reference: " + m + "; for task: " + tId)
                 continue
             if not s in self._simulations:
-                print("\tEncountered a non-existing simulation reference: " + s + "; for task: " + current.getId())
+                print("\tEncountered a non-existing simulation reference: " + s + "; for task: " + tId)
                 continue
-            self._tasks[current.getId()] = {
+            self._tasks[tId] = {
                 'model': m,
                 'simulation': s
             }
+            print_task(tId, self._tasks[tId])
 
         for i in range(0, sedml.getNumDataGenerators()):
             current = sedml.getDataGenerator(i)
@@ -123,10 +158,12 @@ class ExperimentManifest:
                     'component': variable_element.getparent().attrib['name'],
                     'task': t
                 }
-            self._data_generators[current.getId()] = {
+            dgId = current.getId()
+            self._data_generators[dgId] = {
                 'variables': variables,
                 'math': libsedml.formulaToString(current.getMath())
             }
+            print_datagenerator(dgId, self._data_generators[dgId])
 
         for i in range(0, sedml.getNumOutputs()):
             current = sedml.getOutput(i)
