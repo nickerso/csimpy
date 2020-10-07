@@ -238,14 +238,18 @@ class ExperimentManifest:
                 return False
             flat_model = importer.flattenModel(model)
             # generate Python code for the flattened model
+            analyser = libcellml.Analyser()
+            analyser.analyseModel(flat_model);
+            if analyser.errorCount():
+                for e in range(0, analyser.errorCount()):
+                    print(analyser.error(e).description())
+                return False
+
+            analyser_model = analyser.model();
             generator = libcellml.Generator()
+            generator.setModel(analyser_model)
             profile = libcellml.GeneratorProfile(libcellml.GeneratorProfile.Profile.PYTHON)
             generator.setProfile(profile)
-            generator.processModel(flat_model)
-            if generator.errorCount():
-                for e in range(0, generator.errorCount()):
-                    print(generator.error(e).description())
-                return False
             implementation_code = generator.implementationCode()
             module = module_from_string(implementation_code)
             # test module is valid
