@@ -23,6 +23,8 @@ def print_model(id, m):
     print("*#   location: " + m['location'])
     print("*#   ((model['tree']: XML DOM tree))")
     print("*#   ((model['cellml']: string representation of the CellML XML))")
+    print("*#   ((model['instantiated-cellml']: libCellML model with resolved imports once instantiated))")
+    print("*#   ((model['instantiated-module']: the instantiated module from the generated python code for this model))")
 
 def print_task(id, t):
     print("*# Task: " + id)
@@ -38,6 +40,8 @@ def print_datagenerator(id, dg):
         print("*#     Variable: " + vId)
         print("*#       From task: " + v['task'])
         print("*#       CellML variable: {} // {}".format(v['component'], v['name']))
+        print("*#       Array in generated code: {}".format(v['array']))
+        print("*#       Array index in generated code: {}".format(v['index']))
 
 class ExperimentManifest:
 
@@ -156,7 +160,9 @@ class ExperimentManifest:
                 variables[cv.getId()] = {
                     'name': variable_element.attrib['name'],
                     'component': variable_element.getparent().attrib['name'],
-                    'task': t
+                    'task': t,
+                    'array': -1,
+                    'index': 0
                 }
             dgId = current.getId()
             self._data_generators[dgId] = {
@@ -249,7 +255,7 @@ class ExperimentManifest:
                     print(analyser.error(e).description())
                 return False
 
-            analyser_model = analyser.model();
+            analyser_model = analyser.model()
             generator = libcellml.Generator()
             generator.setModel(analyser_model)
             profile = libcellml.GeneratorProfile(libcellml.GeneratorProfile.Profile.PYTHON)
@@ -268,27 +274,35 @@ class ExperimentManifest:
             m['instantiated-cellml'] = model
             m['instantiated-module'] = module
 
-            #
-            # Need to take different modules for variables into account...
-            #
-
-            # Generate the method for getting the data generator values
-            # map the data generators to variables in the generated code
-            arrays = ["dummy", "voi", "state", "variable"]
-            for dgid, dg in self._data_generators.items():
-                print("Mapping data generator: {}".format(dgid))
-                for vid, v in dg['variables'].items():
-                    print("Mapping variable {}: {} / {}".format(vid, v['component'], v['name']))
-                    index, array = get_array_index_for_variable(module, v['component'], v['name'])
+        # Generate the method for getting the data generator values
+        # map the data generators to variables in the generated code
+        arrays = ["dummy", "voi", "state", "variable"]
+        for dgid, dg in self._data_generators.items():
+            print("Mapping data generator: {}".format(dgid))
+            for vid, v in dg['variables'].items():
+                print("Mapping variable {}: {} / {}; from task: {}".format(vid, v['component'], v['name'], v['task']))
+                task = self._tasks[v['task']]
+                model = self._models[task['model']]
+                cellml = model['instantiated-cellml']
+                module = model['instantiated-module']
+                index, array = get_array_index_for_variable(module, v['component'], v['name'])
+                if array > 0:
+                    print("Found at index: {}; in array: {}".format(index, arrays[array]))
+                    v['array'] = array
+                    v['index'] = index
+                if array < 0:
+                    # search for equivalent variables in the flattened model
+                    component = cellml.component(v['component'], True)
+                    variable = component.variable(v['name'])
+                    index, array = get_array_index_for_equivalent_variable(module, variable)
                     if array > 0:
-                        print("Found at index: {}; in array: {}".format(index, arrays[array]))
-                    if array < 0:
-                        # search for equivalent variables in the flattened model
-                        component = model.component(v['component'], True)
-                        variable = component.variable(v['name'])
-                        index, array = get_array_index_for_equivalent_variable(module, variable)
-                        if array > 0:
-                            print("Found equivalent variable at index: {}; in array: {}".format(index, arrays[array]))
+                        print("Found equivalent variable at index: {}; in array: {}".format(index, arrays[array]))
+                        v['array'] = array
+                        v['index'] = index
+                    else:
+                        print("Unable to find a required variable in the generated code")
+                        return False
+            print_datagenerator(dgid, dg)
 
 
         return True
