@@ -19,9 +19,9 @@
     <variable id="deriv_approx_initial_value" units="dimensionless" name="deriv_approx_initial_value" initial_value="0" interface="public_and_private"/>
     <variable id="parabolic_approx" name="sin3" units="dimensionless" interface="public_and_private"/>
     <variable id="C" name="C" interface="public_and_private" initial_value="0.75" units="dimensionless"/>
-    <variable name="amp1" interface="public" initial_value="2.0" units="dimensionless"/>
-    <variable name="amp2" interface="public" initial_value="3.0" units="dimensionless"/>
-    <variable name="amp3" interface="public" initial_value="2.5" units="dimensionless"/>
+    <variable name="amp1" interface="public_and_private" initial_value="2.0" units="dimensionless"/>
+    <variable name="amp2" interface="public_and_private" initial_value="3.0" units="dimensionless"/>
+    <variable name="amp3" interface="public_and_private" initial_value="2.5" units="dimensionless"/>
   </component>
 
   <encapsulation>
