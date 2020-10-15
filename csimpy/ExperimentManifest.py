@@ -237,9 +237,13 @@ class ExperimentManifest:
                 print("Model still has unresolved imports.")
                 return False
             flat_model = importer.flattenModel(model)
+            # fix up duplicate id's to avoid errors in analysing the model
+            annotator = libcellml.Annotator()
+            annotator.setModel(flat_model)
+            annotator.clearAllIds()
             # generate Python code for the flattened model
             analyser = libcellml.Analyser()
-            analyser.analyseModel(flat_model);
+            analyser.analyseModel(flat_model)
             if analyser.errorCount():
                 for e in range(0, analyser.errorCount()):
                     print(analyser.error(e).description())
