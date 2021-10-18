@@ -3,36 +3,25 @@ from tempfile import mkstemp
 import sys
 import importlib
 
-import libsedml
 import libcellml
+import copy
+import lxml.etree
 
-
-def get_xpath_namespaces(sed_element):
-    """
-    Get all the XML namespaces for the given SED-ML element. See https://github.com/fbergmann/libSEDML/issues/77 for
-    some background. This will collect all namespaces from the current element and all its parents.
-
-    :param sed_element: the SED-ML element to define the context for fetching namespaces.
-    :return: a dictionary of defined namespaces.
-    """
-    ns = {}
-    current_sed_base = sed_element
-    while current_sed_base:
-        xmlns = current_sed_base.getElementNamespaces()
-        if xmlns:
-            for n in range(0, xmlns.getNumNamespaces()):
-                prefix = xmlns.getPrefix(n)
-                if prefix == '':
-                    # we can't use a default namespace in XPath so filter it out...
-                    continue
-                elif prefix in ns:
-                    # existing namespace prefixes should not be changed
-                    continue
-                else:
-                    uri = xmlns.getURI(n)
-                    ns[prefix] = uri
-        current_sed_base = current_sed_base.getParentSedObject()
-    return ns
+from .data_model import KISAO_ALGORITHM_MAP
+from biosimulators_utils.config import get_config, Config  # noqa: F401
+from biosimulators_utils.data_model import ValueType  # noqa: F401
+from biosimulators_utils.log.data_model import TaskLog  # noqa: F401
+from biosimulators_utils.report.data_model import VariableResults  # noqa: F401
+from biosimulators_utils.sedml.data_model import (  # noqa: F401
+    SedDocument, ModelLanguage, ModelAttributeChange, UniformTimeCourseSimulation, Algorithm, Task, RepeatedTask,
+    VectorRange, SubTask, DataGenerator, Variable)
+from biosimulators_utils.sedml.io import SedmlSimulationWriter
+from biosimulators_utils.sedml import validation
+from biosimulators_utils.simulator.utils import get_algorithm_substitution_policy
+from biosimulators_utils.utils.core import validate_str_value, raise_errors_warnings
+from biosimulators_utils.warnings import warn, BioSimulatorsWarning
+from kisao.data_model import AlgorithmSubstitutionPolicy, ALGORITHM_SUBSTITUTION_POLICY_LEVELS
+from kisao.utils import get_preferred_substitute_algorithm_by_ids
 
 
 def module_from_string(python_code_string):
@@ -101,3 +90,179 @@ def get_array_index_for_equivalent_variable(module, variable):
             return index, array
 
     return -1, -1
+
+
+def get_csimpy_algorithm(requested_alg, config=None):
+    """ Get a possibly alternative algorithm that OpenCOR should execute
+
+    Args:
+        requested_alg (:obj:`Algorithm`): requested algorithm
+        config (:obj:`Config`, optional): configuration
+
+    Returns:
+        :obj:`Algorithm`: possibly alternative algorithm that OpenCOR should execute
+    """
+    exec_alg = copy.deepcopy(requested_alg)
+
+    algorithm_substitution_policy = get_algorithm_substitution_policy(config=config)
+    exec_alg.kisao_id = get_preferred_substitute_algorithm_by_ids(
+        requested_alg.kisao_id, KISAO_ALGORITHM_MAP.keys(),
+        substitution_policy=algorithm_substitution_policy)
+
+    if exec_alg.kisao_id == requested_alg.kisao_id:
+        alg_specs = KISAO_ALGORITHM_MAP[exec_alg.kisao_id]
+        params_specs = alg_specs['parameters']
+
+        for change in list(exec_alg.changes):
+            param_specs = params_specs.get(change.kisao_id, None)
+            if param_specs:
+
+                is_valid, change.new_value = get_csimpy_algorithm_parameter_value(
+                    change.new_value, param_specs['type'], param_specs.get('enum', None))
+
+                if not is_valid:
+                    if (
+                        ALGORITHM_SUBSTITUTION_POLICY_LEVELS[algorithm_substitution_policy]
+                        > ALGORITHM_SUBSTITUTION_POLICY_LEVELS[AlgorithmSubstitutionPolicy.NONE]
+                    ):
+                        warn('Unsupported value `{}` of {}-valued algorithm parameter `{}` (`{}`) was ignored.'.format(
+                            change.new_value, param_specs['type'].name, param_specs['name'], change.kisao_id), BioSimulatorsWarning)
+                        exec_alg.changes.remove(change)
+
+                    else:
+                        msg = '`{}` (`{}`) must a {}, not `{}`.'.format(
+                            param_specs['name'], change.kisao_id, param_specs['type'].name, change.new_value)
+                        raise ValueError(msg)
+            else:
+                if (
+                    ALGORITHM_SUBSTITUTION_POLICY_LEVELS[algorithm_substitution_policy]
+                    > ALGORITHM_SUBSTITUTION_POLICY_LEVELS[AlgorithmSubstitutionPolicy.NONE]
+                ):
+                    warn('Unsupported algorithm parameter `{}` was ignored.'.format(
+                        change.kisao_id), BioSimulatorsWarning)
+                    exec_alg.changes.remove(change)
+
+                else:
+                    msg = '{} ({}) does not support parameter `{}`. {} support the following parameters:\n  {}'.format(
+                        alg_specs['name'], alg_specs['kisao_id'], change.kisao_id, alg_specs['name'],
+                        '\n  '.join(sorted('{}: {}'.format(param_kisao_id, param_specs['name'])
+                                           for param_kisao_id, param_specs in params_specs.items()))
+                    )
+                    raise NotImplementedError(msg)
+
+    else:
+        exec_alg.changes = []
+
+    return exec_alg
+
+def get_csimpy_algorithm_parameter_value(value, value_type, enum_cls=None):
+    """ Get the CSimPy representation of a value of a algorithm parameter
+
+    Args:
+        value (:obj:`str`): string-encoded parameter value
+        value_type (:obj:`ValueType`): expected type of the value
+        enum_cls (:obj:`type`): allowed values of the parameter
+
+    Returns:
+        :obj:`tuple`:
+
+            * :obj:`bool`: whether the value is valid
+            * :obj:`str`: CSimPy representation of a value of a parameter
+    """
+    if not validate_str_value(value, value_type):
+        return False, None
+
+    if enum_cls:
+        try:
+            return True, enum_cls[value].value
+        except KeyError:
+            pass
+
+        try:
+            return True, enum_cls[value.replace('KISAO:', 'KISAO_')].value
+        except KeyError:
+            pass
+
+        try:
+            return True, enum_cls(value).value
+        except ValueError:
+            pass
+
+        return False, None
+
+    else:
+        return True, value
+
+
+def instantiate_csimpy_model(model_filename, base_path):
+    print("Instantiating model with original source location: " + model_filename)
+    model_tree = lxml.etree.parse(model_filename)
+    model_string = str(lxml.etree.tostring(model_tree, pretty_print=True), 'utf-8')
+    parser = libcellml.Parser()
+    model = parser.parseModel(model_string)
+    # need to flatten before generating code
+    model_base = os.path.dirname(model_filename)
+    importer = libcellml.Importer()
+    importer.resolveImports(model, model_base)
+    if model.hasUnresolvedImports():
+        print("Model still has unresolved imports.")
+        return False
+    flat_model = importer.flattenModel(model)
+    # fix up duplicate id's to avoid errors in analysing the model
+    annotator = libcellml.Annotator()
+    annotator.setModel(flat_model)
+    annotator.clearAllIds()
+    # generate Python code for the flattened model
+    analyser = libcellml.Analyser()
+    analyser.analyseModel(flat_model)
+    if analyser.errorCount():
+        for e in range(0, analyser.errorCount()):
+            print(analyser.error(e).description())
+        return False
+
+    analyser_model = analyser.model()
+    generator = libcellml.Generator()
+    generator.setModel(analyser_model)
+    profile = libcellml.GeneratorProfile(libcellml.GeneratorProfile.Profile.PYTHON)
+    generator.setProfile(profile)
+    implementation_code = generator.implementationCode()
+    module = module_from_string(implementation_code)
+    # test module is valid
+    if module.__version__:
+        if module.__version__ != "0.1.0":
+            print("Unexpected instantiated module version: " + module.__version__)
+            return False
+    else:
+        print("Unable to determine instantiated module version")
+        return False
+    # Return the CellML model and the instantiated implementation
+    return {
+        'instantiated-cellml': model,
+        'instantiated-module': module
+    }
+
+
+def map_csimpy_variables_to_instantiation(variables, model):
+    arrays = ["dummy", "voi", "state", "variable"]
+    for v in variables:
+        print("Mapping variable: {} / {}".format(v['component'], v['name']))
+        module = model['instantiated-module']
+        index, array = get_array_index_for_variable(module, v['component'], v['name'])
+        if array > 0:
+            print("Found at index: {}; in array: {}".format(index, arrays[array]))
+            v['array'] = array
+            v['index'] = index
+        if array < 0:
+            # search for equivalent variables in the flattened model
+            cellml = module['instantiated-cellml']
+            component = cellml.component(v['component'], True)
+            variable = component.variable(v['name'])
+            index, array = get_array_index_for_equivalent_variable(module, variable)
+            if array > 0:
+                print("Found equivalent variable at index: {}; in array: {}".format(index, arrays[array]))
+                v['array'] = array
+                v['index'] = index
+            else:
+                print("Unable to find a required variable in the generated code")
+                return False
+    return True
