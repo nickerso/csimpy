@@ -45,8 +45,8 @@ def module_from_string(python_code_string):
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     # and delete temporary file
-    print("Generated code file: {}; has been deleted.".format(filename))
     os.remove(filename)
+    print("Generated code file: {}; has been deleted.".format(filename))
     return module
 
 
@@ -229,7 +229,7 @@ def instantiate_csimpy_model(model_filename, base_path):
     module = module_from_string(implementation_code)
     # test module is valid
     if module.__version__:
-        if module.__version__ != "0.1.0":
+        if module.__version__ != "0.3.0":
             print("Unexpected instantiated module version: " + module.__version__)
             return False
     else:

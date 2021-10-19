@@ -14,6 +14,7 @@ import copy
 import lxml.etree
 import os
 import tempfile
+import functools
 
 from .utils import get_csimpy_algorithm, instantiate_csimpy_model, map_csimpy_variables_to_instantiation
 
@@ -22,7 +23,7 @@ __all__ = [
 ]
 
 
-def exec_sedml_docs_in_combine_archive(archive_filename, out_dir, config=None, simulator_config=None):
+def exec_sedml_docs_in_combine_archive(archive_filename, out_dir, config=None):
     """ Execute the SED tasks defined in a COMBINE/OMEX archive and save the outputs
 
     Args:
@@ -51,7 +52,7 @@ def exec_sedml_docs_in_combine_archive(archive_filename, out_dir, config=None, s
 def exec_sed_doc(doc, working_dir, base_out_path, rel_out_path=None,
                  apply_xml_model_changes=False,
                  log=None, indent=0, pretty_print_modified_xml_models=False,
-                 log_level=StandardOutputErrorCapturerLevel.c, config=None, simulator_config=None):
+                 log_level=StandardOutputErrorCapturerLevel.python, config=None):
     """ Execute the tasks specified in a SED document and generate the specified outputs
 
     Args:
@@ -73,7 +74,6 @@ def exec_sed_doc(doc, working_dir, base_out_path, rel_out_path=None,
         pretty_print_modified_xml_models (:obj:`bool`, optional): if :obj:`True`, pretty print modified XML models
         log_level (:obj:`StandardOutputErrorCapturerLevel`, optional): level at which to log output
         config (:obj:`Config`, optional): BioSimulators common configuration
-        simulator_config (:obj:`SimulatorConfig`, optional): tellurium configuration
 
     Returns:
         :obj:`tuple`:
@@ -81,7 +81,11 @@ def exec_sed_doc(doc, working_dir, base_out_path, rel_out_path=None,
             * :obj:`ReportResults`: results of each report
             * :obj:`SedDocumentLog`: log of the document
     """
-    return base_exec_sed_doc(exec_sed_task, doc, working_dir, base_out_path,
+    simulator_config = {
+        'archive-root': working_dir,
+    }
+    sed_task_executor = functools.partial(exec_sed_task, simulator_config=simulator_config)
+    return base_exec_sed_doc(sed_task_executor, doc, working_dir, base_out_path,
                              rel_out_path=rel_out_path,
                              apply_xml_model_changes=apply_xml_model_changes,
                              log=log,
@@ -149,7 +153,7 @@ def exec_sed_task(task, variables, preprocessed_task=None, log=None, config=None
         model_filename = task.model.source
 
     # instantiate CSimPy simulation
-    instantiated_model = instantiate_csimpy_model(model_filename, simulator_config['working-dir']) # BASE PATH NEEDED?
+    instantiated_model = instantiate_csimpy_model(model_filename, simulator_config['archive-root'])
 
     if not instantiated_model:
         raise RuntimeError('CSimPy failed to instaniate model.')
