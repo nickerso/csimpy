@@ -16,7 +16,8 @@ import os
 import tempfile
 import functools
 
-from .utils import get_csimpy_algorithm, instantiate_csimpy_model, map_csimpy_variables_to_instantiation
+from .utils import get_csimpy_algorithm, instantiate_csimpy_model, map_csimpy_variables_to_instantiation, \
+    csimpy_execute_integration_task
 
 __all__ = [
     'exec_sedml_docs_in_combine_archive', 'exec_sed_doc', 'exec_sed_task', 'preprocess_sed_task',
@@ -168,17 +169,19 @@ def exec_sed_task(task, variables, preprocessed_task=None, log=None, config=None
         os.remove(model_filename)
 
     # execute the simulation
-    # TODO
-    if not False:
-        raise RuntimeError('OpenCOR failed unexpectedly.')
-
-    # collect the results of the simulation
-    #variable_results = get_results_from_opencor_simulation(opencor_sim, task, variables, preprocessed_task['variable_names'])
-    variable_results = []
+    variable_results = csimpy_execute_integration_task(instantiated_model, preprocessed_task['task'],
+                                                       preprocessed_task['variables'])
 
     # log action
-    # if config.LOG:
-    #     log_opencor_execution(opencor_task, log)
+    if config.LOG:
+        log.algorithm = preprocessed_task['task'].simulation.algorithm.kisao_id
+        log.simulator_details = {
+            'method': 'CSimPy.do_cool_stuff',
+            'algorithmParameters': [
+                {'kisaoID': change.kisao_id, 'value': change.new_value}
+                for change in preprocessed_task['task'].simulation.algorithm.changes
+            ],
+        }
 
     # return results and log
     return variable_results, log

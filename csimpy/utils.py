@@ -22,6 +22,7 @@ from biosimulators_utils.utils.core import validate_str_value, raise_errors_warn
 from biosimulators_utils.warnings import warn, BioSimulatorsWarning
 from kisao.data_model import AlgorithmSubstitutionPolicy, ALGORITHM_SUBSTITUTION_POLICY_LEVELS
 from kisao.utils import get_preferred_substitute_algorithm_by_ids
+import numpy as np
 
 
 def module_from_string(python_code_string):
@@ -269,3 +270,58 @@ def map_csimpy_variables_to_instantiation(variables, model):
                 print("Unable to find a required variable in the generated code")
                 return False
     return True
+
+
+def append_current_results(index, voi, states, variables, sed_results, observables):
+    for id, v in observables.items():
+        if v['array'] == 1:
+            sed_results[id][index] = voi
+        elif v['array'] == 2:
+            sed_results[id][index] = states[v['index']]
+        else:
+            sed_results[id][index] = variables[v['index']]
+
+
+def csimpy_execute_integration_task(model, task, observables):
+    module = model['instantiated-module']
+    initial = task.simulation.initial_time
+    output_start = task.simulation.output_start_time
+    output_end = task.simulation.output_end_time
+    N = task.simulation.number_of_steps
+
+    dx = (output_end-output_start) / N
+    print("Integrate: {} -> {}:{}:{}".format(initial, output_start, output_end, dx))
+
+    # create arrays
+    voi = initial
+    rates = module.create_states_array()
+    states = module.create_states_array()
+    variables = module.create_variables_array()
+    # initialise
+    module.initialise_states_and_constants(states, variables)
+    module.compute_computed_constants(variables)
+    sed_results = VariableResults()
+    for id in observables:
+        sed_results[id] = np.empty(N+1)
+    # integrate to the output start point
+    n = (initial - output_start) * dx
+    for i in range(int(n)):
+        module.compute_rates(voi, states, rates, variables)
+        delta = list(map(lambda var: var * dx, rates))
+        states = [sum(x) for x in zip(states, delta)]
+        voi += dx
+    # and now the observed integration
+    module.compute_variables(voi, states, rates, variables)
+    # save observables
+    append_current_results(0, voi, states, variables, sed_results, observables)
+    for i in range(N):
+        module.compute_rates(voi, states, rates, variables)
+        delta = list(map(lambda var: var * dx, rates))
+        states = [sum(x) for x in zip(states, delta)]
+        voi += dx
+        module.compute_variables(voi, states, rates, variables)
+        # save observables
+        current_index = i+1
+        append_current_results(current_index, voi, states, variables, sed_results, observables)
+
+    return sed_results
