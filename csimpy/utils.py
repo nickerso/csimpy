@@ -203,7 +203,10 @@ def instantiate_csimpy_model(model_filename, base_path):
     # need to flatten before generating code
     model_base = os.path.dirname(model_filename)
     importer = libcellml.Importer()
+    # resolve imports first using the location of the model file directly
     importer.resolveImports(model, model_base)
+    # and then try again with the extracted archive root to pick up unmodified imports
+    importer.resolveImports(model, base_path)
     if model.hasUnresolvedImports():
         print("Model still has unresolved imports.")
         return False
@@ -244,7 +247,7 @@ def instantiate_csimpy_model(model_filename, base_path):
 
 def map_csimpy_variables_to_instantiation(variables, model):
     arrays = ["dummy", "voi", "state", "variable"]
-    for v in variables:
+    for id, v in variables.items():
         print("Mapping variable: {} / {}".format(v['component'], v['name']))
         module = model['instantiated-module']
         index, array = get_array_index_for_variable(module, v['component'], v['name'])
@@ -254,7 +257,7 @@ def map_csimpy_variables_to_instantiation(variables, model):
             v['index'] = index
         if array < 0:
             # search for equivalent variables in the flattened model
-            cellml = module['instantiated-cellml']
+            cellml = model['instantiated-cellml']
             component = cellml.component(v['component'], True)
             variable = component.variable(v['name'])
             index, array = get_array_index_for_equivalent_variable(module, variable)
