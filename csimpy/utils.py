@@ -23,6 +23,7 @@ from biosimulators_utils.warnings import warn, BioSimulatorsWarning
 from kisao.data_model import AlgorithmSubstitutionPolicy, ALGORITHM_SUBSTITUTION_POLICY_LEVELS
 from kisao.utils import get_preferred_substitute_algorithm_by_ids
 import numpy as np
+from scipy.integrate import ode
 
 
 def module_from_string(python_code_string):
@@ -85,7 +86,7 @@ def get_array_index_for_equivalent_variable(module, variable):
         eqv = variable.equivalentVariable(i)
         vname = eqv.name()
         cname = eqv.parent().name()
-        print("Checking equivalent variable: {} / {}".format(cname, vname))
+        # print("Checking equivalent variable: {} / {}".format(cname, vname))
         index, array = get_array_index_for_variable(module, cname, vname)
         if array > 0:
             return index, array
@@ -249,11 +250,11 @@ def instantiate_csimpy_model(model_filename, base_path):
 def map_csimpy_variables_to_instantiation(variables, model):
     arrays = ["dummy", "voi", "state", "variable"]
     for id, v in variables.items():
-        print("Mapping variable: {} / {}".format(v['component'], v['name']))
+        # print("Mapping variable: {} / {}".format(v['component'], v['name']))
         module = model['instantiated-module']
         index, array = get_array_index_for_variable(module, v['component'], v['name'])
         if array > 0:
-            print("Found at index: {}; in array: {}".format(index, arrays[array]))
+            # print("Found at index: {}; in array: {}".format(index, arrays[array]))
             v['array'] = array
             v['index'] = index
         if array < 0:
@@ -263,7 +264,7 @@ def map_csimpy_variables_to_instantiation(variables, model):
             variable = component.variable(v['name'])
             index, array = get_array_index_for_equivalent_variable(module, variable)
             if array > 0:
-                print("Found equivalent variable at index: {}; in array: {}".format(index, arrays[array]))
+                # print("Found equivalent variable at index: {}; in array: {}".format(index, arrays[array]))
                 v['array'] = array
                 v['index'] = index
             else:
@@ -282,15 +283,19 @@ def append_current_results(index, voi, states, variables, sed_results, observabl
             sed_results[id][index] = variables[v['index']]
 
 
+def rhs_function(voi, states, module, rates, variables):
+    module.compute_rates(voi, states, rates, variables)
+    return rates
+
 def csimpy_execute_integration_task(model, task, observables):
     module = model['instantiated-module']
     initial = task.simulation.initial_time
     output_start = task.simulation.output_start_time
     output_end = task.simulation.output_end_time
     N = task.simulation.number_of_steps
+    dx = (output_end - output_start) / N
 
-    dx = (output_end-output_start) / N
-    print("Integrate: {} -> {}:{}:{}".format(initial, output_start, output_end, dx))
+    alg = task.simulation.algorithm.kisao_id
 
     # create arrays
     voi = initial
@@ -303,25 +308,127 @@ def csimpy_execute_integration_task(model, task, observables):
     sed_results = VariableResults()
     for id in observables:
         sed_results[id] = np.empty(N+1)
-    # integrate to the output start point
-    n = (initial - output_start) * dx
-    for i in range(int(n)):
-        module.compute_rates(voi, states, rates, variables)
-        delta = list(map(lambda var: var * dx, rates))
-        states = [sum(x) for x in zip(states, delta)]
-        voi += dx
-    # and now the observed integration
-    module.compute_variables(voi, states, rates, variables)
-    # save observables
-    append_current_results(0, voi, states, variables, sed_results, observables)
-    for i in range(N):
-        module.compute_rates(voi, states, rates, variables)
-        delta = list(map(lambda var: var * dx, rates))
-        states = [sum(x) for x in zip(states, delta)]
-        voi += dx
+
+    if alg == 'KISAO_0000030':
+        # Euler
+        print("Integrate with Euler: {} -> {}:{}:{}".format(initial, output_start, output_end, dx))
+
+        # integrate to the output start point
+        n = (initial - output_start) * dx
+        for i in range(int(n)):
+            module.compute_rates(voi, states, rates, variables)
+            delta = list(map(lambda var: var * dx, rates))
+            states = [sum(x) for x in zip(states, delta)]
+            voi += dx
+        # and now the observed integration
         module.compute_variables(voi, states, rates, variables)
         # save observables
-        current_index = i+1
-        append_current_results(current_index, voi, states, variables, sed_results, observables)
+        append_current_results(0, voi, states, variables, sed_results, observables)
+        for i in range(N):
+            module.compute_rates(voi, states, rates, variables)
+            delta = list(map(lambda var: var * dx, rates))
+            states = [sum(x) for x in zip(states, delta)]
+            voi += dx
+            module.compute_variables(voi, states, rates, variables)
+            # save observables
+            current_index = i+1
+            append_current_results(current_index, voi, states, variables, sed_results, observables)
+    else:
+        # SciPy integrators (shouldn't get here unless one of our supported methods is chosen)
+        solver = ode(rhs_function)
+        solver.set_initial_value(states, voi)
+        solver.set_f_params(module, rates, variables)
+        if alg == 'KISAO_0000535':
+            # VODE
+            integrator_parameters = {}
+            for p in task.simulation.algorithm.changes:
+                if p.kisao_id == 'KISAO_0000209':
+                    integrator_parameters['rtol'] = p.new_value
+                elif p.kisao_id == 'KISAO_0000211':
+                    integrator_parameters['atol'] = p.new_value
+                elif p.kisao_id == 'KISAO_0000475':
+                    integrator_parameters['method'] = p.new_value
+                elif p.kisao_id == 'KISAO_0000415':
+                    integrator_parameters['nsteps'] = p.new_value
+                elif p.kisao_id == 'KISAO_0000467':
+                    integrator_parameters['max_step'] = p.new_value
+                elif p.kisao_id == 'KISAO_0000485':
+                    integrator_parameters['min_step'] = p.new_value
+                elif p.kisao_id == 'KISAO_0000484':
+                    integrator_parameters['order'] = p.new_value
+            solver.set_integrator('vode', **integrator_parameters)
+            print("Integrate with SciPy(vode): {} -> {}:{}:{}".format(initial, output_start, output_end, dx))
+        elif alg == 'KISAO_0000088':
+            # LSODA
+            integrator_parameters = {}
+            for p in task.simulation.algorithm.changes:
+                if p.kisao_id == 'KISAO_0000209':
+                    integrator_parameters['rtol'] = p.new_value
+                elif p.kisao_id == 'KISAO_0000211':
+                    integrator_parameters['atol'] = p.new_value
+                elif p.kisao_id == 'KISAO_0000415':
+                    integrator_parameters['nsteps'] = p.new_value
+                elif p.kisao_id == 'KISAO_0000467':
+                    integrator_parameters['max_step'] = p.new_value
+                elif p.kisao_id == 'KISAO_0000485':
+                    integrator_parameters['min_step'] = p.new_value
+                elif p.kisao_id == 'KISAO_0000219':
+                    integrator_parameters['max_order_ns'] = p.new_value
+                elif p.kisao_id == 'KISAO_0000220':
+                    integrator_parameters['max_order_s'] = p.new_value
+            solver.set_integrator('lsoda', **integrator_parameters)
+            print("Integrate with SciPy(lsoda): {} -> {}:{}:{}".format(initial, output_start, output_end, dx))
+        elif alg == 'KISAO_0000087':
+            # dopri5
+            integrator_parameters = {}
+            for p in task.simulation.algorithm.changes:
+                if p.kisao_id == 'KISAO_0000209':
+                    integrator_parameters['rtol'] = p.new_value
+                elif p.kisao_id == 'KISAO_0000211':
+                    integrator_parameters['atol'] = p.new_value
+                elif p.kisao_id == 'KISAO_0000415':
+                    integrator_parameters['nsteps'] = p.new_value
+                elif p.kisao_id == 'KISAO_0000467':
+                    integrator_parameters['max_step'] = p.new_value
+                elif p.kisao_id == 'KISAO_0000541':
+                    integrator_parameters['beta'] = p.new_value
+            solver.set_integrator('dopri5', **integrator_parameters)
+            print("Integrate with SciPy(dopri5): {} -> {}:{}:{}".format(initial, output_start, output_end, dx))
+        elif alg == 'KISAO_0000436':
+            # dop853
+            integrator_parameters = {}
+            for p in task.simulation.algorithm.changes:
+                if p.kisao_id == 'KISAO_0000209':
+                    integrator_parameters['rtol'] = p.new_value
+                elif p.kisao_id == 'KISAO_0000211':
+                    integrator_parameters['atol'] = p.new_value
+                elif p.kisao_id == 'KISAO_0000415':
+                    integrator_parameters['nsteps'] = p.new_value
+                elif p.kisao_id == 'KISAO_0000467':
+                    integrator_parameters['max_step'] = p.new_value
+                elif p.kisao_id == 'KISAO_0000541':
+                    integrator_parameters['beta'] = p.new_value
+            solver.set_integrator('dop853', **integrator_parameters)
+            print("Integrate with SciPy(dop853): {} -> {}:{}:{}".format(initial, output_start, output_end, dx))
+
+        # integrate to the output start point
+        n = (initial - output_start) * dx
+        for i in range(int(n)):
+            solver.integrate(solver.t + dx)
+            if not solver.successful():
+                raise ValueError('scipy.integrate.ode failed.')
+
+        # and now the observed integration
+        module.compute_variables(solver.t, solver.y, rates, variables)
+        # save observables
+        append_current_results(0, solver.t, solver.y, variables, sed_results, observables)
+        for i in range(N):
+            solver.integrate(solver.t + dx)
+            if not solver.successful():
+                raise ValueError('scipy.integrate.ode failed.')
+            module.compute_variables(solver.t, solver.y, rates, variables)
+            # save observables
+            current_index = i+1
+            append_current_results(current_index, solver.t, solver.y, variables, sed_results, observables)
 
     return sed_results
