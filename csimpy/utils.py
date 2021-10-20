@@ -312,23 +312,31 @@ def csimpy_execute_integration_task(model, task, observables):
     if alg == 'KISAO_0000030':
         # Euler
         print("Integrate with Euler: {} -> {}:{}:{}".format(initial, output_start, output_end, dx))
+        ddx = float(dx)
+        for p in task.simulation.algorithm.changes:
+            if p.kisao_id == 'KISAO_0000483':
+                ddx = float(p.new_value)
 
         # integrate to the output start point
-        n = (initial - output_start) * dx
+        n = float(initial - output_start) * ddx
         for i in range(int(n)):
             module.compute_rates(voi, states, rates, variables)
-            delta = list(map(lambda var: var * dx, rates))
+            delta = list(map(lambda var: var * ddx, rates))
             states = [sum(x) for x in zip(states, delta)]
-            voi += dx
+            voi += ddx
         # and now the observed integration
         module.compute_variables(voi, states, rates, variables)
         # save observables
         append_current_results(0, voi, states, variables, sed_results, observables)
+        n = 1
+        if dx > ddx:
+            n = dx/ddx
         for i in range(N):
-            module.compute_rates(voi, states, rates, variables)
-            delta = list(map(lambda var: var * dx, rates))
-            states = [sum(x) for x in zip(states, delta)]
-            voi += dx
+            for j in range(int(n)):
+                module.compute_rates(voi, states, rates, variables)
+                delta = list(map(lambda var: var * ddx, rates))
+                states = [sum(x) for x in zip(states, delta)]
+                voi += ddx
             module.compute_variables(voi, states, rates, variables)
             # save observables
             current_index = i+1
