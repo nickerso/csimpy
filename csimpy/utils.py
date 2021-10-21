@@ -276,6 +276,7 @@ def map_csimpy_variables_to_instantiation(variables, model):
 def append_current_results(index, voi, states, variables, sed_results, observables):
     for id, v in observables.items():
         if v['array'] == 1:
+            print("voi = {}".format(voi))
             sed_results[id][index] = voi
         elif v['array'] == 2:
             sed_results[id][index] = states[v['index']]
@@ -318,12 +319,13 @@ def csimpy_execute_integration_task(model, task, observables):
                 ddx = float(p.new_value)
 
         # integrate to the output start point
-        n = float(initial - output_start) * ddx
+        n = abs((initial - output_start) / ddx)
         for i in range(int(n)):
             module.compute_rates(voi, states, rates, variables)
             delta = list(map(lambda var: var * ddx, rates))
             states = [sum(x) for x in zip(states, delta)]
             voi += ddx
+
         # and now the observed integration
         module.compute_variables(voi, states, rates, variables)
         # save observables
@@ -420,7 +422,7 @@ def csimpy_execute_integration_task(model, task, observables):
             print("Integrate with SciPy(dop853): {} -> {}:{}:{}".format(initial, output_start, output_end, dx))
 
         # integrate to the output start point
-        n = (initial - output_start) * dx
+        n = abs((initial - output_start) / dx)
         for i in range(int(n)):
             solver.integrate(solver.t + dx)
             if not solver.successful():
