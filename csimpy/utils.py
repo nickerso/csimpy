@@ -39,7 +39,7 @@ def module_from_string(python_code_string):
     fid, filename = mkstemp(suffix='.py', prefix="csimpy_", text=True)
     file = os.fdopen(fid, "w")
     file.write(python_code_string)
-    print("Generated code is in: " + filename)
+    #print("Generated code is in: " + filename)
     file.close()
     # and load it back in
     module_name = os.path.splitext(os.path.basename(filename))[0]
@@ -48,7 +48,7 @@ def module_from_string(python_code_string):
     spec.loader.exec_module(module)
     # and delete temporary file
     os.remove(filename)
-    print("Generated code file: {}; has been deleted.".format(filename))
+    #print("Generated code file: {}; has been deleted.".format(filename))
     return module
 
 
@@ -197,7 +197,7 @@ def get_csimpy_algorithm_parameter_value(value, value_type, enum_cls=None):
 
 
 def instantiate_csimpy_model(model_filename, base_path):
-    print("Instantiating model with original source location: " + model_filename)
+    #print("Instantiating model with original source location: " + model_filename)
     model_tree = lxml.etree.parse(model_filename)
     model_string = str(lxml.etree.tostring(model_tree, pretty_print=True), 'utf-8')
     parser = libcellml.Parser()
@@ -276,7 +276,7 @@ def map_csimpy_variables_to_instantiation(variables, model):
 def append_current_results(index, voi, states, variables, sed_results, observables):
     for id, v in observables.items():
         if v['array'] == 1:
-            print("voi = {}".format(voi))
+            #print("voi = {}".format(voi))
             sed_results[id][index] = voi
         elif v['array'] == 2:
             sed_results[id][index] = states[v['index']]
@@ -304,7 +304,7 @@ def csimpy_execute_integration_task(model, task, observables):
     states = module.create_states_array()
     variables = module.create_variables_array()
     # initialise
-    module.initialise_states_and_constants(states, variables)
+    module.initialise_variables(states, variables)
     module.compute_computed_constants(variables)
     sed_results = VariableResults()
     for id in observables:
@@ -312,7 +312,7 @@ def csimpy_execute_integration_task(model, task, observables):
 
     if alg == 'KISAO_0000030':
         # Euler
-        print("Integrate with Euler: {} -> {}:{}:{}".format(initial, output_start, output_end, dx))
+        #print("Integrate with Euler: {} -> {}:{}:{}".format(initial, output_start, output_end, dx))
         ddx = float(dx)
         for p in task.simulation.algorithm.changes:
             if p.kisao_id == 'KISAO_0000483':
@@ -367,7 +367,7 @@ def csimpy_execute_integration_task(model, task, observables):
                 elif p.kisao_id == 'KISAO_0000484':
                     integrator_parameters['order'] = p.new_value
             solver.set_integrator('vode', **integrator_parameters)
-            print("Integrate with SciPy(vode): {} -> {}:{}:{}".format(initial, output_start, output_end, dx))
+            #print("Integrate with SciPy(vode): {} -> {}:{}:{}".format(initial, output_start, output_end, dx))
         elif alg == 'KISAO_0000088':
             # LSODA
             integrator_parameters = {}
@@ -387,7 +387,7 @@ def csimpy_execute_integration_task(model, task, observables):
                 elif p.kisao_id == 'KISAO_0000220':
                     integrator_parameters['max_order_s'] = p.new_value
             solver.set_integrator('lsoda', **integrator_parameters)
-            print("Integrate with SciPy(lsoda): {} -> {}:{}:{}".format(initial, output_start, output_end, dx))
+            #print("Integrate with SciPy(lsoda): {} -> {}:{}:{}".format(initial, output_start, output_end, dx))
         elif alg == 'KISAO_0000087':
             # dopri5
             integrator_parameters = {}
@@ -403,7 +403,7 @@ def csimpy_execute_integration_task(model, task, observables):
                 elif p.kisao_id == 'KISAO_0000541':
                     integrator_parameters['beta'] = p.new_value
             solver.set_integrator('dopri5', **integrator_parameters)
-            print("Integrate with SciPy(dopri5): {} -> {}:{}:{}".format(initial, output_start, output_end, dx))
+            #print("Integrate with SciPy(dopri5): {} -> {}:{}:{}".format(initial, output_start, output_end, dx))
         elif alg == 'KISAO_0000436':
             # dop853
             integrator_parameters = {}
@@ -419,7 +419,7 @@ def csimpy_execute_integration_task(model, task, observables):
                 elif p.kisao_id == 'KISAO_0000541':
                     integrator_parameters['beta'] = p.new_value
             solver.set_integrator('dop853', **integrator_parameters)
-            print("Integrate with SciPy(dop853): {} -> {}:{}:{}".format(initial, output_start, output_end, dx))
+            #print("Integrate with SciPy(dop853): {} -> {}:{}:{}".format(initial, output_start, output_end, dx))
 
         # integrate to the output start point
         n = abs((initial - output_start) / dx)
