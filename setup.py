@@ -18,8 +18,7 @@ def get_version(this_directory):
 setup(
     name='csimpy',
     version=get_version(this_directory),
-    py_modules=['csimpy'],
-    package_dir={'': '.'},
+    packages=['csimpy'],
     url='https://github.com/nickerso/csimpy',
     license='Apache 2.0',
     author='David Nickerson',
