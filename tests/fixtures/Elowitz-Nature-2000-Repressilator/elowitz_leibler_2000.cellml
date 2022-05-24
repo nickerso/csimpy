@@ -1,0 +1,522 @@
+<!--
+This CellML file was generated on 20/11/2009 at 12:13:17 at p.m. using:
+
+COR (0.9.31.1333)
+Copyright 2002-2009 Dr Alan Garny
+http://cor.physiol.ox.ac.uk/ - cor@physiol.ox.ac.uk
+
+CellML 1.0 was used to generate this model
+http://www.cellml.org/
+--><model xmlns="http://www.cellml.org/cellml/2.0#" xmlns:cellml="http://www.cellml.org/cellml/2.0#" xmlns:xlink="http://www.w3.org/1999/xlink" name="elowitz_leibler_2000" id="elowitz_leibler_2000">
+	
+	   
+	
+   <units name="minute">
+      <unit multiplier="60" units="second"/>
+   </units>
+   <units name="first_order_rate_constant">
+      <unit exponent="-1" units="minute"/>
+   </units>
+   <units name="per_sec">
+      <unit exponent="-1" units="second"/>
+   </units>
+   <units name="second_per_minute">
+      <unit units="second"/>
+	  <unit exponent="-1" units="minute"/>
+   </units>
+   
+   <component name="environment">
+      <variable id="environment_time" name="time" units="minute" interface="public"/>
+   </component>
+   
+   <component name="parameters">
+      <variable initial_value="2" name="n" units="dimensionless" interface="public"/>
+      <variable name="alpha_0" units="dimensionless" interface="public"/>
+      <variable name="alpha" units="dimensionless" interface="public"/>
+      <variable name="beta" units="dimensionless" interface="public"/>
+      <variable initial_value="40" name="K_m" units="dimensionless" interface="public"/>
+      <variable initial_value="20" name="efficiency" units="dimensionless" interface="public"/>
+      <variable initial_value="2" name="mRNA_halflife" units="minute" interface="public"/>
+      <variable name="t_ave" units="minute" interface="public"/>
+      <variable name="kd_prot" units="first_order_rate_constant" interface="public"/>
+      <variable name="kd_mRNA" units="first_order_rate_constant" interface="public"/>
+      <variable initial_value="10" name="prot_halflife" units="minute" interface="public"/>
+      <variable initial_value="5e-4" name="tps_repr" units="per_sec" interface="public"/>
+      <variable initial_value="0.5" name="tps_active" units="per_sec" interface="public"/>
+      <variable name="k_tl" units="first_order_rate_constant" interface="public"/>
+      <variable name="a_tr" units="first_order_rate_constant" interface="public"/>
+      <variable name="a0_tr" units="first_order_rate_constant" interface="public"/>
+      <math xmlns="http://www.w3.org/1998/Math/MathML">
+         <apply>
+            <eq/>
+            <ci>t_ave</ci>
+            <apply>
+               <divide/>
+               <ci>mRNA_halflife</ci>
+               <apply>
+                  <ln/>
+                  <cn  xmlns:cellml_1="http://www.cellml.org/cellml/2.0#" cellml_1:units="dimensionless">2</cn>
+               </apply>
+            </apply>
+         </apply>
+         <apply>
+            <eq/>
+            <ci>kd_prot</ci>
+            <apply>
+               <divide/>
+               <apply>
+                  <ln/>
+                  <cn  xmlns:cellml_1="http://www.cellml.org/cellml/2.0#" cellml_1:units="dimensionless">2</cn>
+               </apply>
+               <ci>prot_halflife</ci>
+            </apply>
+         </apply>
+         <apply>
+            <eq/>
+            <ci>kd_mRNA</ci>
+            <apply>
+               <divide/>
+               <apply>
+                  <ln/>
+                  <cn  xmlns:cellml_1="http://www.cellml.org/cellml/2.0#" cellml_1:units="dimensionless">2</cn>
+               </apply>
+               <ci>mRNA_halflife</ci>
+            </apply>
+         </apply>
+         <apply>
+            <eq/>
+            <ci>k_tl</ci>
+            <apply>
+               <times/>
+               <ci>efficiency</ci>
+               <ci>kd_mRNA</ci>
+            </apply>
+         </apply>
+         <apply>
+            <eq/>
+            <ci>a_tr</ci>
+            <apply>
+               <times/>
+               <apply>
+                  <minus/>
+                  <ci>tps_active</ci>
+                  <ci>tps_repr</ci>
+               </apply>
+               <cn  xmlns:cellml_1="http://www.cellml.org/cellml/2.0#" cellml_1:units="second_per_minute">60</cn>
+            </apply>
+         </apply>
+         <apply>
+            <eq/>
+            <ci>a0_tr</ci>
+            <apply>
+               <times/>
+               <ci>tps_repr</ci>
+               <cn  xmlns:cellml_1="http://www.cellml.org/cellml/2.0#" cellml_1:units="second_per_minute">60</cn>
+            </apply>
+         </apply>
+         <apply>
+            <eq/>
+            <ci>alpha</ci>
+            <apply>
+               <divide/>
+               <apply>
+                  <times/>
+                  <ci>a_tr</ci>
+                  <ci>efficiency</ci>
+               </apply>
+               <apply>
+                  <times/>
+                  <ci>kd_prot</ci>
+                  <ci>K_m</ci>
+               </apply>
+            </apply>
+         </apply>
+         <apply>
+            <eq/>
+            <ci>alpha_0</ci>
+            <apply>
+               <divide/>
+               <apply>
+                  <times/>
+                  <ci>a0_tr</ci>
+                  <ci>efficiency</ci>
+               </apply>
+               <apply>
+                  <times/>
+                  <ci>kd_prot</ci>
+                  <ci>K_m</ci>
+               </apply>
+            </apply>
+         </apply>
+         <apply>
+            <eq/>
+            <ci>beta</ci>
+            <apply>
+               <divide/>
+               <ci>kd_prot</ci>
+               <ci>kd_mRNA</ci>
+            </apply>
+         </apply>
+      </math>
+   </component>
+   <component name="M_lacl">
+      <variable initial_value="0" name="M_lacl" units="dimensionless" interface="public"/>
+      <variable name="a_tr" units="first_order_rate_constant" interface="public"/>
+      <variable name="P_cl" units="dimensionless" interface="public"/>
+      <variable name="n" units="dimensionless" interface="public"/>
+      <variable name="a0_tr" units="first_order_rate_constant" interface="public"/>
+      <variable name="K_m" units="dimensionless" interface="public"/>
+      <variable name="kd_mRNA" units="first_order_rate_constant" interface="public"/>
+      <variable name="time" units="minute" interface="public"/>
+      <math xmlns="http://www.w3.org/1998/Math/MathML">
+         <apply>
+            <eq/>
+            <apply>
+               <diff/>
+               <bvar>
+                  <ci>time</ci>
+               </bvar>
+               <ci>M_lacl</ci>
+            </apply>
+            <apply>
+               <minus/>
+               <apply>
+                  <plus/>
+                  <ci>a0_tr</ci>
+                  <apply>
+                     <divide/>
+                     <apply>
+                        <times/>
+                        <ci>a_tr</ci>
+                        <apply>
+                           <power/>
+                           <ci>K_m</ci>
+                           <ci>n</ci>
+                        </apply>
+                     </apply>
+                     <apply>
+                        <plus/>
+                        <apply>
+                           <power/>
+                           <ci>K_m</ci>
+                           <ci>n</ci>
+                        </apply>
+                        <apply>
+                           <power/>
+                           <ci>P_cl</ci>
+                           <ci>n</ci>
+                        </apply>
+                     </apply>
+                  </apply>
+               </apply>
+               <apply>
+                  <times/>
+                  <ci>kd_mRNA</ci>
+                  <ci>M_lacl</ci>
+               </apply>
+            </apply>
+         </apply>
+      </math>
+   </component>
+   <component name="M_tetR">
+      <variable initial_value="20" name="M_tetR" units="dimensionless" interface="public"/>
+      <variable name="a_tr" units="first_order_rate_constant" interface="public"/>
+      <variable name="P_lacl" units="dimensionless" interface="public"/>
+      <variable name="n" units="dimensionless" interface="public"/>
+      <variable name="a0_tr" units="first_order_rate_constant" interface="public"/>
+      <variable name="K_m" units="dimensionless" interface="public"/>
+      <variable name="kd_mRNA" units="first_order_rate_constant" interface="public"/>
+      <variable name="time" units="minute" interface="public"/>
+      <math xmlns="http://www.w3.org/1998/Math/MathML">
+         <apply>
+            <eq/>
+            <apply>
+               <diff/>
+               <bvar>
+                  <ci>time</ci>
+               </bvar>
+               <ci>M_tetR</ci>
+            </apply>
+            <apply>
+               <minus/>
+               <apply>
+                  <plus/>
+                  <apply>
+                     <divide/>
+                     <apply>
+                        <times/>
+                        <ci>a_tr</ci>
+                        <apply>
+                           <power/>
+                           <ci>K_m</ci>
+                           <ci>n</ci>
+                        </apply>
+                     </apply>
+                     <apply>
+                        <plus/>
+                        <apply>
+                           <power/>
+                           <ci>K_m</ci>
+                           <ci>n</ci>
+                        </apply>
+                        <apply>
+                           <power/>
+                           <ci>P_lacl</ci>
+                           <ci>n</ci>
+                        </apply>
+                     </apply>
+                  </apply>
+                  <ci>a0_tr</ci>
+               </apply>
+               <apply>
+                  <times/>
+                  <ci>kd_mRNA</ci>
+                  <ci>M_tetR</ci>
+               </apply>
+            </apply>
+         </apply>
+      </math>
+   </component>
+   <component name="M_cl">
+      <variable initial_value="0" name="M_cl" units="dimensionless" interface="public"/>
+      <variable name="a_tr" units="first_order_rate_constant" interface="public"/>
+      <variable name="P_tetR" units="dimensionless" interface="public"/>
+      <variable name="n" units="dimensionless" interface="public"/>
+      <variable name="a0_tr" units="first_order_rate_constant" interface="public"/>
+      <variable name="K_m" units="dimensionless" interface="public"/>
+      <variable name="kd_mRNA" units="first_order_rate_constant" interface="public"/>
+      <variable name="time" units="minute" interface="public"/>
+      <math xmlns="http://www.w3.org/1998/Math/MathML">
+         <apply>
+            <eq/>
+            <apply>
+               <diff/>
+               <bvar>
+                  <ci>time</ci>
+               </bvar>
+               <ci>M_cl</ci>
+            </apply>
+            <apply>
+               <minus/>
+               <apply>
+                  <plus/>
+                  <apply>
+                     <divide/>
+                     <apply>
+                        <times/>
+                        <ci>a_tr</ci>
+                        <apply>
+                           <power/>
+                           <ci>K_m</ci>
+                           <ci>n</ci>
+                        </apply>
+                     </apply>
+                     <apply>
+                        <plus/>
+                        <apply>
+                           <power/>
+                           <ci>K_m</ci>
+                           <ci>n</ci>
+                        </apply>
+                        <apply>
+                           <power/>
+                           <ci>P_tetR</ci>
+                           <ci>n</ci>
+                        </apply>
+                     </apply>
+                  </apply>
+                  <ci>a0_tr</ci>
+               </apply>
+               <apply>
+                  <times/>
+                  <ci>kd_mRNA</ci>
+                  <ci>M_cl</ci>
+               </apply>
+            </apply>
+         </apply>
+      </math>
+   </component>
+   <component name="P_lacl">
+      <variable id="P_lacl_P_lacl" initial_value="0" name="P_lacl" units="dimensionless" interface="public"/>
+      <variable name="k_tl" units="first_order_rate_constant" interface="public"/>
+      <variable name="M_lacl" units="dimensionless" interface="public"/>
+      <variable name="kd_prot" units="first_order_rate_constant" interface="public"/>
+      <variable name="time" units="minute" interface="public"/>
+      <math xmlns="http://www.w3.org/1998/Math/MathML">
+         <apply>
+            <eq/>
+            <apply>
+               <diff/>
+               <bvar>
+                  <ci>time</ci>
+               </bvar>
+               <ci>P_lacl</ci>
+            </apply>
+            <apply>
+               <minus/>
+               <apply>
+                  <times/>
+                  <ci>k_tl</ci>
+                  <ci>M_lacl</ci>
+               </apply>
+               <apply>
+                  <times/>
+                  <ci>kd_prot</ci>
+                  <ci>P_lacl</ci>
+               </apply>
+            </apply>
+         </apply>
+      </math>
+   </component>
+   <component name="P_tetR">
+      <variable id="P_tetR_P_tetR" initial_value="0" name="P_tetR" units="dimensionless" interface="public"/>
+      <variable name="k_tl" units="first_order_rate_constant" interface="public"/>
+      <variable name="M_tetR" units="dimensionless" interface="public"/>
+      <variable name="kd_prot" units="first_order_rate_constant" interface="public"/>
+      <variable name="time" units="minute" interface="public"/>
+      <math xmlns="http://www.w3.org/1998/Math/MathML">
+         <apply>
+            <eq/>
+            <apply>
+               <diff/>
+               <bvar>
+                  <ci>time</ci>
+               </bvar>
+               <ci>P_tetR</ci>
+            </apply>
+            <apply>
+               <minus/>
+               <apply>
+                  <times/>
+                  <ci>k_tl</ci>
+                  <ci>M_tetR</ci>
+               </apply>
+               <apply>
+                  <times/>
+                  <ci>kd_prot</ci>
+                  <ci>P_tetR</ci>
+               </apply>
+            </apply>
+         </apply>
+      </math>
+   </component>
+   <component name="P_cl">
+      <variable id="P_cl_P_cl" initial_value="0" name="P_cl" units="dimensionless" interface="public"/>
+      <variable name="k_tl" units="first_order_rate_constant" interface="public"/>
+      <variable name="M_cl" units="dimensionless" interface="public"/>
+      <variable name="kd_prot" units="first_order_rate_constant" interface="public"/>
+      <variable name="time" units="minute" interface="public"/>
+      <math xmlns="http://www.w3.org/1998/Math/MathML">
+         <apply>
+            <eq/>
+            <apply>
+               <diff/>
+               <bvar>
+                  <ci>time</ci>
+               </bvar>
+               <ci>P_cl</ci>
+            </apply>
+            <apply>
+               <minus/>
+               <apply>
+                  <times/>
+                  <ci>k_tl</ci>
+                  <ci>M_cl</ci>
+               </apply>
+               <apply>
+                  <times/>
+                  <ci>kd_prot</ci>
+                  <ci>P_cl</ci>
+               </apply>
+            </apply>
+         </apply>
+      </math>
+   </component>
+   <connection component_1="M_lacl" component_2="environment">
+      
+      <map_variables variable_1="time" variable_2="time"/>
+   </connection>
+   <connection component_1="M_tetR" component_2="environment">
+      
+      <map_variables variable_1="time" variable_2="time"/>
+   </connection>
+   <connection component_1="M_cl" component_2="environment">
+      
+      <map_variables variable_1="time" variable_2="time"/>
+   </connection>
+   <connection component_1="P_lacl" component_2="environment">
+      
+      <map_variables variable_1="time" variable_2="time"/>
+   </connection>
+   <connection component_1="P_tetR" component_2="environment">
+      
+      <map_variables variable_1="time" variable_2="time"/>
+   </connection>
+   <connection component_1="P_cl" component_2="environment">
+      
+      <map_variables variable_1="time" variable_2="time"/>
+   </connection>
+   <connection component_1="M_lacl" component_2="parameters">
+      
+      <map_variables variable_1="a_tr" variable_2="a_tr"/>
+      <map_variables variable_1="n" variable_2="n"/>
+      <map_variables variable_1="a0_tr" variable_2="a0_tr"/>
+      <map_variables variable_1="K_m" variable_2="K_m"/>
+      <map_variables variable_1="kd_mRNA" variable_2="kd_mRNA"/>
+   </connection>
+   <connection component_1="M_lacl" component_2="P_cl">
+      
+      <map_variables variable_1="P_cl" variable_2="P_cl"/>
+   </connection>
+   <connection component_1="M_tetR" component_2="parameters">
+      
+      <map_variables variable_1="a_tr" variable_2="a_tr"/>
+      <map_variables variable_1="n" variable_2="n"/>
+      <map_variables variable_1="a0_tr" variable_2="a0_tr"/>
+      <map_variables variable_1="K_m" variable_2="K_m"/>
+      <map_variables variable_1="kd_mRNA" variable_2="kd_mRNA"/>
+   </connection>
+   <connection component_1="M_tetR" component_2="P_lacl">
+      
+      <map_variables variable_1="P_lacl" variable_2="P_lacl"/>
+   </connection>
+   <connection component_1="M_cl" component_2="parameters">
+      
+      <map_variables variable_1="a_tr" variable_2="a_tr"/>
+      <map_variables variable_1="n" variable_2="n"/>
+      <map_variables variable_1="a0_tr" variable_2="a0_tr"/>
+      <map_variables variable_1="K_m" variable_2="K_m"/>
+      <map_variables variable_1="kd_mRNA" variable_2="kd_mRNA"/>
+   </connection>
+   <connection component_1="M_cl" component_2="P_tetR">
+      
+      <map_variables variable_1="P_tetR" variable_2="P_tetR"/>
+   </connection>
+   <connection component_1="P_lacl" component_2="parameters">
+      
+      <map_variables variable_1="k_tl" variable_2="k_tl"/>
+      <map_variables variable_1="kd_prot" variable_2="kd_prot"/>
+   </connection>
+   <connection component_1="P_lacl" component_2="M_lacl">
+      
+      <map_variables variable_1="M_lacl" variable_2="M_lacl"/>
+   </connection>
+   <connection component_1="P_tetR" component_2="parameters">
+      
+      <map_variables variable_1="k_tl" variable_2="k_tl"/>
+      <map_variables variable_1="kd_prot" variable_2="kd_prot"/>
+   </connection>
+   <connection component_1="P_tetR" component_2="M_tetR">
+      
+      <map_variables variable_1="M_tetR" variable_2="M_tetR"/>
+   </connection>
+   <connection component_1="P_cl" component_2="parameters">
+      
+      <map_variables variable_1="k_tl" variable_2="k_tl"/>
+      <map_variables variable_1="kd_prot" variable_2="kd_prot"/>
+   </connection>
+   <connection component_1="P_cl" component_2="M_cl">
+      
+      <map_variables variable_1="M_cl" variable_2="M_cl"/>
+   </connection>
+</model>

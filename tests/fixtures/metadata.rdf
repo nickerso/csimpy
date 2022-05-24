@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:vCard="http://www.w3.org/2006/vcard/ns#">
+  <rdf:Description rdf:about="./parabolic_approx_sin.xml">
+    <dcterms:creator>
+      <rdf:Bag>
+        <rdf:li rdf:parseType="Resource">
+          <vCard:n rdf:parseType="Resource">
+            <vCard:family-name>Andre</vCard:family-name>
+            <vCard:given-name>Andre</vCard:given-name>
+          </vCard:n>
+          <vCard:email>d.nickerson@auckland.ac.nz</vCard:email>
+          <vCard:org rdf:parseType="Resource">
+            <vCard:organization-name>Auckland University</vCard:organization-name>
+          </vCard:org>
+        </rdf:li>
+      </rdf:Bag>
+    </dcterms:creator>
+    <dcterms:created rdf:parseType="Resource">
+      <dcterms:W3CDTF>2021-10-18T10:52:19Z</dcterms:W3CDTF>
+    </dcterms:created>
+    <dcterms:modified rdf:parseType="Resource">
+      <dcterms:W3CDTF>2021-10-18T10:52:19Z</dcterms:W3CDTF>
+    </dcterms:modified>
+  </rdf:Description>
+  <rdf:Description rdf:about="./sin.xml">
+    <dcterms:creator>
+      <rdf:Bag>
+        <rdf:li rdf:parseType="Resource">
+          <vCard:n rdf:parseType="Resource">
+            <vCard:family-name>Andre</vCard:family-name>
+            <vCard:given-name>Andre</vCard:given-name>
+          </vCard:n>
+          <vCard:email>d.nickerson@auckland.ac.nz</vCard:email>
+          <vCard:org rdf:parseType="Resource">
+            <vCard:organization-name>Auckland University</vCard:organization-name>
+          </vCard:org>
+        </rdf:li>
+      </rdf:Bag>
+    </dcterms:creator>
+    <dcterms:created rdf:parseType="Resource">
+      <dcterms:W3CDTF>2021-10-18T10:52:41Z</dcterms:W3CDTF>
+    </dcterms:created>
+    <dcterms:modified rdf:parseType="Resource">
+      <dcterms:W3CDTF>2021-10-18T10:52:41Z</dcterms:W3CDTF>
+    </dcterms:modified>
+  </rdf:Description>
+  <rdf:Description rdf:about="./sine_approximations_import.sedml">
+    <dcterms:creator>
+      <rdf:Bag>
+        <rdf:li rdf:parseType="Resource">
+          <vCard:n rdf:parseType="Resource">
+            <vCard:family-name>Andre</vCard:family-name>
+            <vCard:given-name>Andre</vCard:given-name>
+          </vCard:n>
+          <vCard:email>d.nickerson@auckland.ac.nz</vCard:email>
+          <vCard:org rdf:parseType="Resource">
+            <vCard:organization-name>Auckland University</vCard:organization-name>
+          </vCard:org>
+        </rdf:li>
+      </rdf:Bag>
+    </dcterms:creator>
+    <dcterms:created rdf:parseType="Resource">
+      <dcterms:W3CDTF>2021-10-18T10:52:09Z</dcterms:W3CDTF>
+    </dcterms:created>
+    <dcterms:modified rdf:parseType="Resource">
+      <dcterms:W3CDTF>2021-10-18T10:52:09Z</dcterms:W3CDTF>
+    </dcterms:modified>
+  </rdf:Description>
+  <rdf:Description rdf:about="./deriv_approx_sin.xml">
+    <dcterms:creator>
+      <rdf:Bag>
+        <rdf:li rdf:parseType="Resource">
+          <vCard:n rdf:parseType="Resource">
+            <vCard:family-name>Andre</vCard:family-name>
+            <vCard:given-name>Andre</vCard:given-name>
+          </vCard:n>
+          <vCard:email>d.nickerson@auckland.ac.nz</vCard:email>
+          <vCard:org rdf:parseType="Resource">
+            <vCard:organization-name>Auckland University</vCard:organization-name>
+          </vCard:org>
+        </rdf:li>
+      </rdf:Bag>
+    </dcterms:creator>
+    <dcterms:created rdf:parseType="Resource">
+      <dcterms:W3CDTF>2021-10-18T10:52:15Z</dcterms:W3CDTF>
+    </dcterms:created>
+    <dcterms:modified rdf:parseType="Resource">
+      <dcterms:W3CDTF>2021-10-18T10:52:15Z</dcterms:W3CDTF>
+    </dcterms:modified>
+  </rdf:Description>
+</rdf:RDF>

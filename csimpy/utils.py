@@ -3,36 +3,27 @@ from tempfile import mkstemp
 import sys
 import importlib
 
-import libsedml
 import libcellml
+import copy
+import lxml.etree
 
-
-def get_xpath_namespaces(sed_element):
-    """
-    Get all the XML namespaces for the given SED-ML element. See https://github.com/fbergmann/libSEDML/issues/77 for
-    some background. This will collect all namespaces from the current element and all its parents.
-
-    :param sed_element: the SED-ML element to define the context for fetching namespaces.
-    :return: a dictionary of defined namespaces.
-    """
-    ns = {}
-    current_sed_base = sed_element
-    while current_sed_base:
-        xmlns = current_sed_base.getElementNamespaces()
-        if xmlns:
-            for n in range(0, xmlns.getNumNamespaces()):
-                prefix = xmlns.getPrefix(n)
-                if prefix == '':
-                    # we can't use a default namespace in XPath so filter it out...
-                    continue
-                elif prefix in ns:
-                    # existing namespace prefixes should not be changed
-                    continue
-                else:
-                    uri = xmlns.getURI(n)
-                    ns[prefix] = uri
-        current_sed_base = current_sed_base.getParentSedObject()
-    return ns
+from .data_model import KISAO_ALGORITHM_MAP
+from biosimulators_utils.config import get_config, Config  # noqa: F401
+from biosimulators_utils.data_model import ValueType  # noqa: F401
+from biosimulators_utils.log.data_model import TaskLog  # noqa: F401
+from biosimulators_utils.report.data_model import VariableResults  # noqa: F401
+from biosimulators_utils.sedml.data_model import (  # noqa: F401
+    SedDocument, ModelLanguage, ModelAttributeChange, UniformTimeCourseSimulation, Algorithm, Task, RepeatedTask,
+    VectorRange, SubTask, DataGenerator, Variable)
+from biosimulators_utils.sedml.io import SedmlSimulationWriter
+from biosimulators_utils.sedml import validation
+from biosimulators_utils.simulator.utils import get_algorithm_substitution_policy
+from biosimulators_utils.utils.core import validate_str_value, raise_errors_warnings
+from biosimulators_utils.warnings import warn, BioSimulatorsWarning
+from kisao.data_model import AlgorithmSubstitutionPolicy, ALGORITHM_SUBSTITUTION_POLICY_LEVELS
+from kisao.utils import get_preferred_substitute_algorithm_by_ids
+import numpy as np
+from scipy.integrate import ode
 
 
 def module_from_string(python_code_string):
@@ -48,7 +39,7 @@ def module_from_string(python_code_string):
     fid, filename = mkstemp(suffix='.py', prefix="csimpy_", text=True)
     file = os.fdopen(fid, "w")
     file.write(python_code_string)
-    print("Generated code is in: " + filename)
+    #print("Generated code is in: " + filename)
     file.close()
     # and load it back in
     module_name = os.path.splitext(os.path.basename(filename))[0]
@@ -56,8 +47,8 @@ def module_from_string(python_code_string):
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     # and delete temporary file
-    print("Generated code file: {}; has been deleted.".format(filename))
     os.remove(filename)
+    #print("Generated code file: {}; has been deleted.".format(filename))
     return module
 
 
@@ -95,9 +86,359 @@ def get_array_index_for_equivalent_variable(module, variable):
         eqv = variable.equivalentVariable(i)
         vname = eqv.name()
         cname = eqv.parent().name()
-        print("Checking equivalent variable: {} / {}".format(cname, vname))
+        # print("Checking equivalent variable: {} / {}".format(cname, vname))
         index, array = get_array_index_for_variable(module, cname, vname)
         if array > 0:
             return index, array
 
     return -1, -1
+
+
+def get_csimpy_algorithm(requested_alg, config=None):
+    """ Get a possibly alternative algorithm that OpenCOR should execute
+
+    Args:
+        requested_alg (:obj:`Algorithm`): requested algorithm
+        config (:obj:`Config`, optional): configuration
+
+    Returns:
+        :obj:`Algorithm`: possibly alternative algorithm that OpenCOR should execute
+    """
+    exec_alg = copy.deepcopy(requested_alg)
+
+    algorithm_substitution_policy = get_algorithm_substitution_policy(config=config)
+    exec_alg.kisao_id = get_preferred_substitute_algorithm_by_ids(
+        requested_alg.kisao_id, KISAO_ALGORITHM_MAP.keys(),
+        substitution_policy=algorithm_substitution_policy)
+
+    if exec_alg.kisao_id == requested_alg.kisao_id:
+        alg_specs = KISAO_ALGORITHM_MAP[exec_alg.kisao_id]
+        params_specs = alg_specs['parameters']
+
+        for change in list(exec_alg.changes):
+            param_specs = params_specs.get(change.kisao_id, None)
+            if param_specs:
+
+                is_valid, change.new_value = get_csimpy_algorithm_parameter_value(
+                    change.new_value, param_specs['type'], param_specs.get('enum', None))
+
+                if not is_valid:
+                    if (
+                        ALGORITHM_SUBSTITUTION_POLICY_LEVELS[algorithm_substitution_policy]
+                        > ALGORITHM_SUBSTITUTION_POLICY_LEVELS[AlgorithmSubstitutionPolicy.NONE]
+                    ):
+                        warn('Unsupported value `{}` of {}-valued algorithm parameter `{}` (`{}`) was ignored.'.format(
+                            change.new_value, param_specs['type'].name, param_specs['name'], change.kisao_id), BioSimulatorsWarning)
+                        exec_alg.changes.remove(change)
+
+                    else:
+                        msg = '`{}` (`{}`) must a {}, not `{}`.'.format(
+                            param_specs['name'], change.kisao_id, param_specs['type'].name, change.new_value)
+                        raise ValueError(msg)
+            else:
+                if (
+                    ALGORITHM_SUBSTITUTION_POLICY_LEVELS[algorithm_substitution_policy]
+                    > ALGORITHM_SUBSTITUTION_POLICY_LEVELS[AlgorithmSubstitutionPolicy.NONE]
+                ):
+                    warn('Unsupported algorithm parameter `{}` was ignored.'.format(
+                        change.kisao_id), BioSimulatorsWarning)
+                    exec_alg.changes.remove(change)
+
+                else:
+                    msg = '{} ({}) does not support parameter `{}`. {} support the following parameters:\n  {}'.format(
+                        alg_specs['name'], alg_specs['kisao_id'], change.kisao_id, alg_specs['name'],
+                        '\n  '.join(sorted('{}: {}'.format(param_kisao_id, param_specs['name'])
+                                           for param_kisao_id, param_specs in params_specs.items()))
+                    )
+                    raise NotImplementedError(msg)
+
+    else:
+        exec_alg.changes = []
+
+    return exec_alg
+
+def get_csimpy_algorithm_parameter_value(value, value_type, enum_cls=None):
+    """ Get the CSimPy representation of a value of a algorithm parameter
+
+    Args:
+        value (:obj:`str`): string-encoded parameter value
+        value_type (:obj:`ValueType`): expected type of the value
+        enum_cls (:obj:`type`): allowed values of the parameter
+
+    Returns:
+        :obj:`tuple`:
+
+            * :obj:`bool`: whether the value is valid
+            * :obj:`str`: CSimPy representation of a value of a parameter
+    """
+    if not validate_str_value(value, value_type):
+        return False, None
+
+    if enum_cls:
+        try:
+            return True, enum_cls[value].value
+        except KeyError:
+            pass
+
+        try:
+            return True, enum_cls[value.replace('KISAO:', 'KISAO_')].value
+        except KeyError:
+            pass
+
+        try:
+            return True, enum_cls(value).value
+        except ValueError:
+            pass
+
+        return False, None
+
+    else:
+        return True, value
+
+
+def instantiate_csimpy_model(model_filename, base_path):
+    #print("Instantiating model with original source location: " + model_filename)
+    model_tree = lxml.etree.parse(model_filename)
+    model_string = str(lxml.etree.tostring(model_tree, pretty_print=True), 'utf-8')
+    parser = libcellml.Parser()
+    model = parser.parseModel(model_string)
+    # need to flatten before generating code
+    model_base = os.path.dirname(model_filename)
+    importer = libcellml.Importer()
+    # resolve imports first using the location of the model file directly
+    importer.resolveImports(model, model_base)
+    # and then try again with the extracted archive root to pick up unmodified imports
+    importer.resolveImports(model, base_path)
+    if model.hasUnresolvedImports():
+        print("Model still has unresolved imports.")
+        return False
+    flat_model = importer.flattenModel(model)
+    # fix up duplicate id's to avoid errors in analysing the model
+    annotator = libcellml.Annotator()
+    annotator.setModel(flat_model)
+    annotator.clearAllIds()
+    # generate Python code for the flattened model
+    analyser = libcellml.Analyser()
+    analyser.analyseModel(flat_model)
+    if analyser.errorCount():
+        for e in range(0, analyser.errorCount()):
+            print(analyser.error(e).description())
+        return False
+
+    analyser_model = analyser.model()
+    generator = libcellml.Generator()
+    generator.setModel(analyser_model)
+    profile = libcellml.GeneratorProfile(libcellml.GeneratorProfile.Profile.PYTHON)
+    generator.setProfile(profile)
+    implementation_code = generator.implementationCode()
+    module = module_from_string(implementation_code)
+    # test module is valid
+    if module.__version__:
+        if module.__version__ != "0.3.0":
+            print("Unexpected instantiated module version: " + module.__version__)
+            return False
+    else:
+        print("Unable to determine instantiated module version")
+        return False
+    # Return the CellML model and the instantiated implementation
+    return {
+        'instantiated-cellml': model,
+        'instantiated-module': module
+    }
+
+
+def map_csimpy_variables_to_instantiation(variables, model):
+    arrays = ["dummy", "voi", "state", "variable"]
+    for id, v in variables.items():
+        # print("Mapping variable: {} / {}".format(v['component'], v['name']))
+        module = model['instantiated-module']
+        index, array = get_array_index_for_variable(module, v['component'], v['name'])
+        if array > 0:
+            # print("Found at index: {}; in array: {}".format(index, arrays[array]))
+            v['array'] = array
+            v['index'] = index
+        if array < 0:
+            # search for equivalent variables in the flattened model
+            cellml = model['instantiated-cellml']
+            component = cellml.component(v['component'], True)
+            variable = component.variable(v['name'])
+            index, array = get_array_index_for_equivalent_variable(module, variable)
+            if array > 0:
+                # print("Found equivalent variable at index: {}; in array: {}".format(index, arrays[array]))
+                v['array'] = array
+                v['index'] = index
+            else:
+                print("Unable to find a required variable in the generated code")
+                return False
+    return True
+
+
+def append_current_results(index, voi, states, variables, sed_results, observables):
+    for id, v in observables.items():
+        if v['array'] == 1:
+            #print("voi = {}".format(voi))
+            sed_results[id][index] = voi
+        elif v['array'] == 2:
+            sed_results[id][index] = states[v['index']]
+        else:
+            sed_results[id][index] = variables[v['index']]
+
+
+def rhs_function(voi, states, module, rates, variables):
+    module.compute_rates(voi, states, rates, variables)
+    return rates
+
+def csimpy_execute_integration_task(model, task, observables):
+    module = model['instantiated-module']
+    initial = task.simulation.initial_time
+    output_start = task.simulation.output_start_time
+    output_end = task.simulation.output_end_time
+    N = task.simulation.number_of_steps
+    dx = (output_end - output_start) / N
+
+    alg = task.simulation.algorithm.kisao_id
+
+    # create arrays
+    voi = initial
+    rates = module.create_states_array()
+    states = module.create_states_array()
+    variables = module.create_variables_array()
+    # initialise
+    module.initialise_variables(states, variables)
+    module.compute_computed_constants(variables)
+    sed_results = VariableResults()
+    for id in observables:
+        sed_results[id] = np.empty(N+1)
+
+    if alg == 'KISAO_0000030':
+        # Euler
+        #print("Integrate with Euler: {} -> {}:{}:{}".format(initial, output_start, output_end, dx))
+        ddx = float(dx)
+        for p in task.simulation.algorithm.changes:
+            if p.kisao_id == 'KISAO_0000483':
+                ddx = float(p.new_value)
+
+        # integrate to the output start point
+        n = abs((initial - output_start) / ddx)
+        for i in range(int(n)):
+            module.compute_rates(voi, states, rates, variables)
+            delta = list(map(lambda var: var * ddx, rates))
+            states = [sum(x) for x in zip(states, delta)]
+            voi += ddx
+
+        # and now the observed integration
+        module.compute_variables(voi, states, rates, variables)
+        # save observables
+        append_current_results(0, voi, states, variables, sed_results, observables)
+        n = 1
+        if dx > ddx:
+            n = dx/ddx
+        for i in range(N):
+            for j in range(int(n)):
+                module.compute_rates(voi, states, rates, variables)
+                delta = list(map(lambda var: var * ddx, rates))
+                states = [sum(x) for x in zip(states, delta)]
+                voi += ddx
+            module.compute_variables(voi, states, rates, variables)
+            # save observables
+            current_index = i+1
+            append_current_results(current_index, voi, states, variables, sed_results, observables)
+    else:
+        # SciPy integrators (shouldn't get here unless one of our supported methods is chosen)
+        solver = ode(rhs_function)
+        solver.set_initial_value(states, voi)
+        solver.set_f_params(module, rates, variables)
+        if alg == 'KISAO_0000535':
+            # VODE
+            integrator_parameters = {}
+            for p in task.simulation.algorithm.changes:
+                if p.kisao_id == 'KISAO_0000209':
+                    integrator_parameters['rtol'] = p.new_value
+                elif p.kisao_id == 'KISAO_0000211':
+                    integrator_parameters['atol'] = p.new_value
+                elif p.kisao_id == 'KISAO_0000475':
+                    integrator_parameters['method'] = p.new_value
+                elif p.kisao_id == 'KISAO_0000415':
+                    integrator_parameters['nsteps'] = p.new_value
+                elif p.kisao_id == 'KISAO_0000467':
+                    integrator_parameters['max_step'] = p.new_value
+                elif p.kisao_id == 'KISAO_0000485':
+                    integrator_parameters['min_step'] = p.new_value
+                elif p.kisao_id == 'KISAO_0000484':
+                    integrator_parameters['order'] = p.new_value
+            solver.set_integrator('vode', **integrator_parameters)
+            #print("Integrate with SciPy(vode): {} -> {}:{}:{}".format(initial, output_start, output_end, dx))
+        elif alg == 'KISAO_0000088':
+            # LSODA
+            integrator_parameters = {}
+            for p in task.simulation.algorithm.changes:
+                if p.kisao_id == 'KISAO_0000209':
+                    integrator_parameters['rtol'] = p.new_value
+                elif p.kisao_id == 'KISAO_0000211':
+                    integrator_parameters['atol'] = p.new_value
+                elif p.kisao_id == 'KISAO_0000415':
+                    integrator_parameters['nsteps'] = p.new_value
+                elif p.kisao_id == 'KISAO_0000467':
+                    integrator_parameters['max_step'] = p.new_value
+                elif p.kisao_id == 'KISAO_0000485':
+                    integrator_parameters['min_step'] = p.new_value
+                elif p.kisao_id == 'KISAO_0000219':
+                    integrator_parameters['max_order_ns'] = p.new_value
+                elif p.kisao_id == 'KISAO_0000220':
+                    integrator_parameters['max_order_s'] = p.new_value
+            solver.set_integrator('lsoda', **integrator_parameters)
+            #print("Integrate with SciPy(lsoda): {} -> {}:{}:{}".format(initial, output_start, output_end, dx))
+        elif alg == 'KISAO_0000087':
+            # dopri5
+            integrator_parameters = {}
+            for p in task.simulation.algorithm.changes:
+                if p.kisao_id == 'KISAO_0000209':
+                    integrator_parameters['rtol'] = p.new_value
+                elif p.kisao_id == 'KISAO_0000211':
+                    integrator_parameters['atol'] = p.new_value
+                elif p.kisao_id == 'KISAO_0000415':
+                    integrator_parameters['nsteps'] = p.new_value
+                elif p.kisao_id == 'KISAO_0000467':
+                    integrator_parameters['max_step'] = p.new_value
+                elif p.kisao_id == 'KISAO_0000541':
+                    integrator_parameters['beta'] = p.new_value
+            solver.set_integrator('dopri5', **integrator_parameters)
+            #print("Integrate with SciPy(dopri5): {} -> {}:{}:{}".format(initial, output_start, output_end, dx))
+        elif alg == 'KISAO_0000436':
+            # dop853
+            integrator_parameters = {}
+            for p in task.simulation.algorithm.changes:
+                if p.kisao_id == 'KISAO_0000209':
+                    integrator_parameters['rtol'] = p.new_value
+                elif p.kisao_id == 'KISAO_0000211':
+                    integrator_parameters['atol'] = p.new_value
+                elif p.kisao_id == 'KISAO_0000415':
+                    integrator_parameters['nsteps'] = p.new_value
+                elif p.kisao_id == 'KISAO_0000467':
+                    integrator_parameters['max_step'] = p.new_value
+                elif p.kisao_id == 'KISAO_0000541':
+                    integrator_parameters['beta'] = p.new_value
+            solver.set_integrator('dop853', **integrator_parameters)
+            #print("Integrate with SciPy(dop853): {} -> {}:{}:{}".format(initial, output_start, output_end, dx))
+
+        # integrate to the output start point
+        n = abs((initial - output_start) / dx)
+        for i in range(int(n)):
+            solver.integrate(solver.t + dx)
+            if not solver.successful():
+                raise ValueError('scipy.integrate.ode failed.')
+
+        # and now the observed integration
+        module.compute_variables(solver.t, solver.y, rates, variables)
+        # save observables
+        append_current_results(0, solver.t, solver.y, variables, sed_results, observables)
+        for i in range(N):
+            solver.integrate(solver.t + dx)
+            if not solver.successful():
+                raise ValueError('scipy.integrate.ode failed.')
+            module.compute_variables(solver.t, solver.y, rates, variables)
+            # save observables
+            current_index = i+1
+            append_current_results(current_index, solver.t, solver.y, variables, sed_results, observables)
+
+    return sed_results
