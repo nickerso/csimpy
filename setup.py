@@ -6,6 +6,9 @@ this_directory = path.abspath(path.dirname(__file__))
 with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
+with open(path.join(this_directory, 'requirements.txt'), encoding='utf-8') as f:
+    requirements = f.read().splitlines()
+
 def get_version(this_directory):
     with open(path.join(this_directory, 'csimpy/_version.py'), encoding='utf-8') as f:
         version_file = f.read()
@@ -25,5 +28,11 @@ setup(
     author_email='d.nickerson@auckland.ac.nz',
     description='Using the BioSimulators-utils methods for handling SED-ML with CellML 2.0 models using libCellML.',
     long_description=long_description,
-    long_description_content_type='text/markdown'
+    long_description_content_type='text/markdown',
+    entry_points={
+        'console_scripts': [
+            'csimpy=csimpy.cli:main'
+        ]
+    },
+    install_requires=requirements
 )
