@@ -234,7 +234,7 @@ def instantiate_csimpy_model(model_filename, base_path):
     module = module_from_string(implementation_code)
     # test module is valid
     if module.__version__:
-        if module.__version__ != "0.3.0":
+        if module.__version__ != "0.4.0":
             print("Unexpected instantiated module version: " + module.__version__)
             return False
     else:
@@ -304,7 +304,7 @@ def csimpy_execute_integration_task(model, task, observables):
     states = module.create_states_array()
     variables = module.create_variables_array()
     # initialise
-    module.initialise_variables(states, variables)
+    module.initialise_variables(states, rates, variables)
     module.compute_computed_constants(variables)
     sed_results = VariableResults()
     for id in observables:
