@@ -22,9 +22,9 @@
     <listOfModels>
         <model id="original_model" language="urn:sedml:language:cellml.2_0" source="sine_approximations_import.xml"/>
         <model id="changed_amp1" language="urn:sedml:language:cellml.2_0" source="sine_approximations_import.xml">
-            <listOfChanges xmlns:cellml2="this is a test namespace that should not be used ever">
-                <changeAttribute xmlns:cellml2="http://www.cellml.org/cellml/2.0#"
-                                 target="/cellml2:model/cellml2:component[@name=&quot;main&quot;]/cellml:variable[@name=&quot;amp1&quot;]/@initial_value"
+            <listOfChanges>
+                <changeAttribute
+                                 target="/cellml:model/cellml:component[@name=&quot;main&quot;]/cellml:variable[@name=&quot;amp1&quot;]/@initial_value"
                                  newValue="0.5" />
             </listOfChanges>
         </model>
